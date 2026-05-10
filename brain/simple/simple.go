@@ -15,9 +15,9 @@ import (
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/common"
 	"git.noncepad.com/pkg/bot/state"
 	"git.noncepad.com/pkg/bot/txbuilder"
+	"git.noncepad.com/pkg/optimizer/util"
 	sgo "git.noncepad.com/pkg/solana-go"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	"git.noncepad.com/pkg/optimizer/util"
 )
 
 type hookSimple struct {
@@ -104,6 +104,7 @@ func (hs *hookSimple) Evaluate(solpipeState brain.SolpipeState, bidderState brai
 	return nil
 }
 
+// downloadBouncerV1 tbd
 func (hs *hookSimple) downloadBouncerV1(ctx context.Context) (mgrbot.Image, error) {
 	fp, err := util.DownloadCatscopeRustBotDemonstrator(ctx)
 	if err != nil {
