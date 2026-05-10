@@ -17,7 +17,7 @@ import (
 	"git.noncepad.com/pkg/bot/txbuilder"
 	sgo "git.noncepad.com/pkg/solana-go"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	"github.com/noncepad/optimizer/util"
+	"git.noncepad.com/pkg/optimizer/util"
 )
 
 type hookSimple struct {

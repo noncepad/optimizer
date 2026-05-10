@@ -13,7 +13,7 @@ import (
 	sgo "git.noncepad.com/pkg/solana-go"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	"github.com/alecthomas/kong"
-	"github.com/noncepad/optimizer/brain/simple"
+	"git.noncepad.com/pkg/optimizer/brain/simple"
 )
 
 // defaultBotMarketID is overridden at build time via -ldflags "-X main.defaultBotMarketID=<key>".

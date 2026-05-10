@@ -1,4 +1,4 @@
-module github.com/noncepad/optimizer
+module git.noncepad.com/pkg/optimizer
 
 go 1.25.0
 
