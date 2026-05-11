@@ -28,8 +28,8 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
 filippo.io/edwards25519 v1.0.0-rc.1/go.mod h1:N1IkdkCkiLB6tki+MYJoSx2JTY9NUlxZE7eHn5EwJns=
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
-git.noncepad.com/pkg/bot v0.4.4 h1:y5AFApMvYtfOkMv9qcJlzxaBa06IyY9RryUVDJNKGHg=
-git.noncepad.com/pkg/bot v0.4.4/go.mod h1:hZiA0JGhR7L3gNcFd38K6eTPBYKHDc7fo14vdN7uWfQ=
+git.noncepad.com/pkg/bot v0.4.5 h1:gGp+LWSjMEOGN3Jdc9cBdKF6eP/Tj2yyhzc0YKW13iI=
+git.noncepad.com/pkg/bot v0.4.5/go.mod h1:hZiA0JGhR7L3gNcFd38K6eTPBYKHDc7fo14vdN7uWfQ=
 git.noncepad.com/pkg/safejar v0.3.2 h1:g0duvgriE6FV28bpC0KCkZz7A5ksIPep4vS7Kcl5AAM=
 git.noncepad.com/pkg/safejar v0.3.2/go.mod h1:vFNQq9hN4TWvoBEm+aPQX7+1x5IoDtHLp5yA/pmq/2M=
 git.noncepad.com/pkg/solana-go v0.1.2 h1:ImPGJDK8ralGBoDMMJ4xvx70XZSdIY4OT5jkk9xrTeE=

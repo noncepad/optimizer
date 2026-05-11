@@ -7,7 +7,7 @@ go 1.25.0
 //replace git.noncepad.com/pkg/solpipe-util => ../solpipe-util
 
 require (
-	git.noncepad.com/pkg/bot v0.4.4
+	git.noncepad.com/pkg/bot v0.4.5
 	git.noncepad.com/pkg/solana-go v0.1.2
 	git.noncepad.com/pkg/solpipe-util v0.4.3
 	github.com/alecthomas/kong v1.15.0

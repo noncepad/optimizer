@@ -10,10 +10,10 @@ import (
 	mothership "git.noncepad.com/pkg/bot/solpipe/bidder/manager"
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/bidder"
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/common"
+	"git.noncepad.com/pkg/optimizer/brain/simple"
 	sgo "git.noncepad.com/pkg/solana-go"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	"github.com/alecthomas/kong"
-	"git.noncepad.com/pkg/optimizer/brain/simple"
 )
 
 // defaultBotMarketID is overridden at build time via -ldflags "-X main.defaultBotMarketID=<key>".
@@ -33,8 +33,6 @@ func (c *VersionCmd) Run() error {
 }
 
 type RunCmd struct {
-	ProxyURL      string `option:"proxy"                              help:"proxy server address (tcp://host:port or unix:///path)."`
-	ManagerURL    string `option:"manager"                             help:"manage server address (tcp://host:port or unix:///path)."`
 	LocalFeePayer string `arg:"fee-payer" help:"the file path to the fee payer (not bidder proxy fee payer)"`
 	Echo          bool   `name:"echo" env:"ECHO" help:"enable echo mode in helloworldv1"`
 }
