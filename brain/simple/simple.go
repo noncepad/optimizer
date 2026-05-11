@@ -32,6 +32,7 @@ type hookSimple struct {
 	botMarketID sgo.PublicKey
 }
 
+// Create creates a helloworld bot.
 func Create(ctx context.Context, cancel context.CancelFunc) brain.Brain {
 	entry := util.LoggerBrainSimple.Fields(logger.FromContext(ctx))
 	return &hookSimple{
