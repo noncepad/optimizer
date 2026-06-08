@@ -182,7 +182,7 @@ go build -o ./optimizer ./cmd
 Run the optimizer:
 
 ```bash
-BOT_IMAGE=$HOME/work/catscope-rust-bot/target/wasm32-wasip2/release/catscope_rust_bot.was ./optimizer run ./fee-payer.json -v
+BOT_IMAGE=$HOME/work/catscope-rust-bot/target/wasm32-wasip2/release/catscope_rust_bot.wasm ./optimizer run ./fee-payer.json -v
 ```
 
 * Set `BOT_IMAGE` to the file path of the compiled web assembly bot

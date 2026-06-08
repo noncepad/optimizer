@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	sgo "git.noncepad.com/pkg/solana-go"
+	sgo "github.com/gagliardetto/solana-go"
 )
 
 var botPipelineWhiteList = ""
