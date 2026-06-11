@@ -16,6 +16,7 @@ import (
 )
 
 func TestOrca(t *testing.T) {
+	workDir := t.TempDir()
 	err := godotenv.Load("../.env")
 	if err != nil {
 		t.Log(err)
@@ -36,7 +37,7 @@ func TestOrca(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	orcaLoader, err := orca.Create(ctx, pf.State())
+	orcaLoader, err := orca.Create(ctx, pf.State(), workDir)
 	if err != nil {
 		t.Fatal(err)
 	}

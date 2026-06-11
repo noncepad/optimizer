@@ -1,9 +1,6 @@
 # Catscope Optimizer
 
-Run a web assembly bot that will run in [the Catscope runtime](https://catscope.io) over [Solpipe](https://solpipe.io).
-Solpipe sets up a gRPC tunnel.  The Optimizer code base talks with the
-local Solpipe bidder daemon to access the target Validator (Pipeline=`2Gi87bD2MNKFREReqkJgcLodkBuQEcYGKaaWz45i2Nbo`).
-The main event loop is in `./brain/simple/simple.go`.
+Run a web assembly bot that will run in [the Catscope runtime](https://catscope.io) over [Solpipe](https://solpipe.io). A local Solpipe bidder daemon sets up a gRPC tunnel to a validator. The Optimizer code base talks with the local Solpipe bidder daemon to access the target Validator (Pipeline=`2Gi87bD2MNKFREReqkJgcLodkBuQEcYGKaaWz45i2Nbo`). The main event loop is in `./brain/simple/simple.go`.
 
 The rest of this page describes how to run the optimizer.  This involves
 setting up Safejar and Solpipe CLI tools, creating some onchain accounts,
@@ -42,16 +39,13 @@ brew install noncepad/homebrew-tap/noncepad-solpipe
 To do an upgrade:
 
 ```bash
-brew install noncepad-solpipe
+brew upgrade noncepad-solpipe
 ```
 
 ## Prerequisite
 
-We must separate the main custody of funds from the bidder daemon that automatically pays USD for API access.
-Set up a Jar, an onchain Solana account that controls funds like a treasury.  
-The *Jar owner* controls all funds, so owner signatures need to be done on a special PC.  For starting out,
-we can ignore this requirement.  Once the Jar has been created, we will then delegate funds
-to the Bidder daemon on a market by market basis.
+We must separate the main custody of funds from the bidder daemon that automatically pays USD for API access. Set up a Jar, an onchain Solana account that controls funds like a treasury.  
+The *Jar owner* controls all funds, so owner signatures need to be done on a special PC.  For starting out, we can ignore this requirement.  Once the Jar has been created, we will then delegate funds to the Bidder daemon on a market by market basis.
 
 ```bash
 WALLET=usb://ledger?key=10
@@ -88,6 +82,12 @@ The daemon is accessible at:
 * management socket: `$HOME/.solpipe.bidder.manage.sock`
 * gRPC proxy socket: `$HOME/.solpipe.bidder.proxy.sock`
 
+Interact with the daemon with the command in a separate terminal:
+
+```bash
+solpipe bidder tui
+```
+
 ## Join Bot Market
 
 For each market place, the user needs to:
@@ -98,7 +98,9 @@ For each market place, the user needs to:
    * to connect to pipelines for free idle capacity, just set the budget cap to 0
 1. programmatically adjust the portfolio and budget
 
-### Delegate funds
+### Delegate funds (ie Set Policy)
+
+Safejar has a rule sets that govern the spending of token funds from a Delegation account. The goal is to have the bidder daemon be able to participate in Validator auctions to gain access to their respective Catscope bot runtimes.
 
 ```bash
 MARKET=6VQk8GA84p7zZSyL8XtX6oVd3Vp4EJ5hoUenKoC3fHSf
@@ -147,23 +149,13 @@ Interact with the daemon with:
 solpipe bidder tui
 ```
 
-## Compile Web Assembly Bot
-
-```bash
-cd $HOME/work 
-git clone https://github.com/noncepad/catscope-rust-bot
-cd catscope-rust-bot
-git checkout v0.3.3-catscope
-cargo build --target wasm32-wasip2 --release
-```
-
-* please check if there is a later version than `v0.3.3` as there may be many frequent updates
-
 ## Run Optimizer
+
+The optimizer code actually compiles the code automatically. The code that does that is in `./prefetch/rust.go` `Build` function.  The reason the optimizer compiles the [Catscope Rust Bot](https://github.com/noncepad/catscope-rust-bot) is that the optimizer statically compiles chain state into the web assembly binary to save on validator bot runtime memory and time.
 
 The optimizer is an example of how to programmatically:
 
-1. set a budget allocation for different pipelines (in this example, no USD/hour and 1 pipeline)
+1. set a budget allocation for different pipelines (in this example, no USD/hour and 1 pipeline); see `./brain/helloworldv1`
 1. connect to the single pipeline
 1. upload a bot to this pipeline (which sits in front a validator bot runtime)
 1. run the bot and see stderr output
@@ -177,12 +169,12 @@ solana-keygen new -o ./fee-payer.json
 go build -o ./optimizer ./cmd
 ```
 
-* the fee payer does not require any funds and is unused in the code
+* the fee payer is also the trading wallet
 
 Run the optimizer:
 
 ```bash
-BOT_IMAGE=$HOME/work/catscope-rust-bot/target/wasm32-wasip2/release/catscope_rust_bot.wasm ./optimizer run ./fee-payer.json -v
+MODE=helloworldv1 REPO=$HOME/work/catscope-rust-bot ./optimizer run ./fee-payer.json --orca
 ```
 
 * Set `BOT_IMAGE` to the file path of the compiled web assembly bot

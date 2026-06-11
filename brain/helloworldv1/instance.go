@@ -59,8 +59,8 @@ out:
 				err = errors.New("cannot receive echo request")
 			case KeyFlagEchoResponse:
 				entry.With(logger.Loc("loop", 4)).Info(fmt.Sprintf("_______________)))))))echo response %s", string(x.Value())))
-			case KeyFlagTxLatency:
-				var lh Latency
+			case KeyFlagLatencyReportV1:
+				var lh LatencyReportV1
 				var n int
 				data := x.Value()
 				n, err = lh.Parse(data)
@@ -70,7 +70,7 @@ out:
 					err = fmt.Errorf("mismatch tx latency report data size: %d vs %d", n, len(data))
 				} else {
 					ps.mx.Lock()
-					ps.listTxLatency.Append(lh)
+					ps.listLatencyReportV1.Append(lh)
 					ps.mx.Unlock()
 				}
 			default:

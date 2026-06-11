@@ -26,8 +26,8 @@ func TestPool(t *testing.T) {
 		dialer := state.DefaultDialer(stateAddr)
 		client = state.New(ctx, dialer, 30*time.Second)
 	}
-
-	orcaFetcher, err := orca.Create(ctx, client)
+	workingDir := t.TempDir()
+	orcaFetcher, err := orca.Create(ctx, client, workingDir)
 	if err != nil {
 		t.Fatal(err)
 	}

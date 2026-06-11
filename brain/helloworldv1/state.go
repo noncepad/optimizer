@@ -7,13 +7,13 @@ import (
 )
 
 type pendingState struct {
-	mx            *sync.Mutex
-	listTxLatency *dslist.Generic[Latency]
+	mx                  *sync.Mutex
+	listLatencyReportV1 *dslist.Generic[LatencyReportV1]
 }
 
 func createPendingState() *pendingState {
 	return &pendingState{
-		mx:            &sync.Mutex{},
-		listTxLatency: dslist.CreateGeneric[Latency](),
+		mx:                  &sync.Mutex{},
+		listLatencyReportV1: dslist.CreateGeneric[LatencyReportV1](),
 	}
 }

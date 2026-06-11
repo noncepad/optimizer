@@ -2,9 +2,11 @@
 package helloworldv1
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -37,25 +39,42 @@ type eventHook struct {
 	wallet      *walletInfo
 	config      *Configuration
 	state       *pendingState
+	latencyFile io.Writer
 }
 type Configuration struct {
-	BotImage string
+	BotImage        string
+	LatencyFilePath string
 }
 
-// Create creates a helloworld bot.
-func Create(ctx context.Context, cancel context.CancelCauseFunc, parentKey sgo.PrivateKey, config *Configuration) brain.Brain {
+// Create creates a helloworld gRPC event hook.
+func Create(ctx context.Context, cancel context.CancelCauseFunc, parentKey sgo.PrivateKey, config *Configuration) (brain.Brain, error) {
 	entry := util.LoggerBrainSimple.Fields(logger.FromContext(ctx))
-	return &eventHook{
-		ctx:       logger.ToContext(ctx, entry),
-		cancel:    cancel,
-		logger:    entry,
-		parentKey: parentKey,
-		wallet:    createWallet(),
-		config:    config,
-		state:     createPendingState(),
+	var writer io.Writer
+	var err error
+	if 0 < len(config.LatencyFilePath) {
+		var f *os.File
+		f, err = os.Create(config.LatencyFilePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open latency log path")
+		}
+		writer = bufio.NewWriter(f)
 	}
+	return &eventHook{
+		ctx:         logger.ToContext(ctx, entry),
+		cancel:      cancel,
+		logger:      entry,
+		parentKey:   parentKey,
+		wallet:      createWallet(),
+		config:      config,
+		state:       createPendingState(),
+		latencyFile: writer,
+	}, nil
 }
 
+// Init is where we set a Pipeline allocation.  In this case, we just want to
+// connect to a single Pipeline (ie Validator selling bot runtime capacity).
+// We set the auction budget to 0.00 because we are not ready to participate in
+// Solpipe auctions yet.
 func (hs *eventHook) Init(g graph.Graph, builder *txbuilder.BuildManager, addressBook common.BotClientDialer, bidmgr *bidder.BidderManager, authorizer sgo.PublicKey) error {
 	doneC := hs.ctx.Done()
 	hs.graph = g
@@ -64,26 +83,36 @@ func (hs *eventHook) Init(g graph.Graph, builder *txbuilder.BuildManager, addres
 	hs.addressBook = addressBook
 	hs.authorizer = authorizer
 	hs.botMarketID = common.GetBotMarketID()
-	hs.logger.With(logger.Loc("init", 1)).Debug("setting allocation")
+	// this is the free Catscope non-voting validator
 	targetPipeline := common.SampleBotPipeline()
 	entry := hs.logger.With("pipeline", targetPipeline)
+	entry.With(logger.Loc("init", 1)).Info("calling Allocate on manager daemon")
 	// spend money here to get into a validator if the validator is
 	// oversubscribed.
-	err := hs.bidmgr.Allocate(hs.ctx, hs.botMarketID, 0.0, map[sgo.PublicKey]float64{
-		targetPipeline: 1.0,
-	})
+	allocCtx, allocCancel := context.WithTimeout(hs.ctx, 30*time.Second)
+	err := hs.bidmgr.Allocate(
+		allocCtx,
+		hs.botMarketID,
+		0.00,
+		map[sgo.PublicKey]float64{
+			targetPipeline: 1.0,
+		},
+	)
+	allocCancel()
 	if err != nil {
 		entry.With(logger.Loc("init", 2), "err", err).Info("failed to set allocation")
 		return fmt.Errorf("allocation failed: %s", err)
 	}
-	entry.With(logger.Loc("init", 3)).Debug("setting allocation; waiting for bidder proxy to connect with pipeline")
+	entry.With(logger.Loc("init", 3)).Info("setting allocation; waiting for bidder proxy to connect with pipeline")
 
 	mEnv := make(map[string]string, 1)
 	mEnv["MODE"] = "helloworldv1"
 	var botImage mgrbot.Image
 	if 0 < len(hs.config.BotImage) {
+		// compile a bot locally
 		botImage, err = hs.useLocalImage(hs.ctx, hs.config.BotImage, mEnv)
 	} else {
+		// download a bot image from https://noncepad.com
 		botImage, err = hs.downloadDefaultImage(hs.ctx)
 	}
 	if err != nil {
@@ -96,12 +125,15 @@ botdone:
 	for timeFinish.After(time.Now()) {
 		mEnv2 := make(map[string]string)
 		mEnv2["RUST_BACKTRACE"] = "1"
+		// send the image to the validator and turn it on.
+		// if there is already an instance running, it will be killed.
 		instance, err = botImage.Upload(targetPipeline, nil, mEnv2)
 		if err != nil {
 			select {
 			case <-doneC:
 				break botdone
 			case <-time.After(30 * time.Second):
+				entry.With(logger.Loc("init", 4)).Info("waiting for upload")
 				continue
 			}
 		}
@@ -125,7 +157,7 @@ botdone:
 			}
 		}
 		if err != nil {
-			entry.With(logger.Loc("init", 4), "err", err).Info("failed to get bot client for pipeline")
+			entry.With(logger.Loc("init", 5), "err", err).Info("failed to get bot client for pipeline")
 		}
 	}
 	if err != nil {

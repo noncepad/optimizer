@@ -17,10 +17,11 @@ import (
 var defaultBotMarketID = "6VQk8GA84p7zZSyL8XtX6oVd3Vp4EJ5hoUenKoC3fHSf"
 
 type CLI struct {
-	Verbose bool       `short:"v" env:"VERBOSE" help:"Enable debug-level logging."`
-	Version VersionCmd `cmd:"version" help:"Print version."`
-	Run     RunCmd     `cmd:"run" help:"Run the optimizer mothership."`
-	Balance BalanceCmd `cmd:"balance" help:"Get the balance for the trading wallet."`
+	Verbose  bool       `short:"v" env:"VERBOSE" help:"Enable debug-level logging."`
+	StateURL string     `option:"state" help:"state url."`
+	Version  VersionCmd `cmd:"version" help:"Print version."`
+	Run      RunCmd     `cmd:"run" help:"Run the optimizer mothership."`
+	Balance  BalanceCmd `cmd:"balance" help:"Get the balance for the trading wallet."`
 }
 
 type VersionCmd struct{}
@@ -54,10 +55,13 @@ func main() {
 		kong.Vars{"bot_market_id_default": defaultBotMarketID},
 	)
 	if err := logger.Set(cli.Verbose); err != nil {
+		rc.Cancel(err)
 		fmt.Fprintf(os.Stderr, "error: %s\n", err)
 		os.Exit(1)
 	}
+	rc.StateURL = cli.StateURL
 	err := ctx.Run()
+	rc.Cancel(err)
 	rc.Wait.Wait()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %s\n", err)

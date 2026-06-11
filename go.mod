@@ -2,14 +2,14 @@ module git.noncepad.com/pkg/optimizer
 
 go 1.25.4
 
-//replace git.noncepad.com/pkg/bot => ../bot
+replace git.noncepad.com/pkg/bot => ../bot
 
 //replace github.com/noncepad/catmsg => ../catmsg
 
 //replace git.noncepad.com/pkg/solpipe-util => ../solpipe-util
 
 require (
-	git.noncepad.com/pkg/bot v0.4.167
+	git.noncepad.com/pkg/bot v0.0.0-00010101000000-000000000000
 	git.noncepad.com/pkg/solpipe-util v0.4.217
 	github.com/alecthomas/kong v1.15.0
 	github.com/gagliardetto/binary v0.8.0

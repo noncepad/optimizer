@@ -47,19 +47,6 @@ func (orca *Orca) Load(targetDirectory string, tp *trading.TradingPair) error {
 	maxList := make([]*WhirlpoolConfiguration, len(orca.Pools))
 	k := 0
 	for _, x := range orca.Pools {
-		orca.em.Lock()
-		aA := orca.em.UnsafeAccount(x.VaultA)
-		aB := orca.em.UnsafeAccount(x.VaultB)
-		orca.em.Unlock()
-		if aA == nil || aB == nil {
-			continue
-		}
-		balA := vaultBalance(aA.Data())
-		balB := vaultBalance(aB.Data())
-		if balA < minVaultBalance || balB < minVaultBalance {
-			continue
-		}
-		tp.Add(x.TokenMintA, x.TokenMintB)
 		maxList[k] = &WhirlpoolConfiguration{
 			Pubkey: x.Pubkey,
 			MintA:  x.TokenMintA,

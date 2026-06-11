@@ -21,7 +21,9 @@ type StaticLoader interface {
 	Env(map[string]string) error
 }
 
-// Build an image
+// Build an image. Take the data from prefetch (e.g. Orca pool data) and
+// write the Json files into the Rust code base so that those files can be
+// statically compiled into the web assembly binary.
 func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, listLoader []StaticLoader) (*BotImage, error) {
 	tmpdir, err := os.MkdirTemp(pf.tmpdir, "prefactor*")
 	if err != nil {
@@ -122,8 +124,9 @@ func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, li
 	if len(mEnv) == 0 {
 		return nil, fmt.Errorf("empty mEnv %+v", mEnv)
 	}
-	pf.logger.Info(fmt.Sprintf("compiling wasm bot at %s", targetRepositoryPath))
+	pf.logger.Info(fmt.Sprintf("compiling - 1 - wasm bot at %s", targetRepositoryPath))
 	err = cmd.Run()
+	pf.logger.Info(fmt.Sprintf("compiling - 2 - wasm bot at %s", targetRepositoryPath))
 	if err != nil {
 		lastErr := err
 		f, err := os.Open(filepath.Join(tmpdir, "stderr.log"))
@@ -133,6 +136,7 @@ func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, li
 		}
 		return nil, fmt.Errorf("program failed: %s", lastErr)
 	}
+	pf.logger.Info(fmt.Sprintf("compiling - 3 - wasm bot at %s", targetRepositoryPath))
 	_ = os.RemoveAll(tmpdir)
 	var botFilePath string
 	{
@@ -140,6 +144,7 @@ func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, li
 		if err != nil {
 			return nil, fmt.Errorf("failed to copy blob: %s", err)
 		}
+		pf.logger.Info(fmt.Sprintf("compiling - 4 - wasm bot at %s", targetRepositoryPath))
 		_, err = io.Copy(botF, outF)
 		botFilePath = botF.Name()
 		_ = botF.Close()
@@ -149,6 +154,7 @@ func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, li
 		}
 
 	}
+	pf.logger.Info(fmt.Sprintf("compiled wasm %s", targetRepositoryPath))
 	bi := &BotImage{path: botFilePath}
 	//	runtime.AddCleanup(bi, func(fp string) {
 	//		_ = os.RemoveAll(fp)

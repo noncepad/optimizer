@@ -58,9 +58,15 @@ func (hs *eventHook) Evaluate(solpipeState brain.SolpipeState, bidderState brain
 			hs.wallet.childCtx = nil
 		}
 	}
+	var err error
 	hs.state.mx.Lock()
-	for report := range hs.state.listTxLatency.Drain {
-		hs.logger.Info(fmt.Sprintf("Transaction Latency Report: %+v", report))
+	for report := range hs.state.listLatencyReportV1.Drain {
+		if hs.latencyFile != nil {
+			_, err = fmt.Fprintf(hs.latencyFile, "%s| %s\n", time.Now(), report.String())
+			if err != nil {
+				hs.state.mx.Unlock()
+			}
+		}
 	}
 	hs.state.mx.Unlock()
 	hs.wallet.parentSOL = solpipeState.System(hs.parentKey.PublicKey())
@@ -68,7 +74,6 @@ func (hs *eventHook) Evaluate(solpipeState brain.SolpipeState, bidderState brain
 	cp := new(ctxPair)
 	cp.ctx, cp.cancel = context.WithTimeout(hs.ctx, 60*time.Second)
 	var helper *txbuilder.Helper
-	var err error
 	// update SOL mint
 	if false {
 		if hs.wallet.childSOL < BudgetChildSOL && hs.wallet.childCtx == nil && hs.wallet.transferCount == 0 {

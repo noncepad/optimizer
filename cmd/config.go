@@ -6,7 +6,8 @@ import (
 )
 
 type RunConfig struct {
-	Ctx    context.Context
-	Cancel context.CancelCauseFunc
-	Wait   *sync.WaitGroup
+	Ctx      context.Context
+	Cancel   context.CancelCauseFunc
+	Wait     *sync.WaitGroup
+	StateURL string
 }
