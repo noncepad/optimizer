@@ -1,4 +1,4 @@
-package helloworldv1
+package arbv1
 
 // pendingState is a thread-safe buffer shared between loopInstance (writer)
 // and Evaluate (reader). loopInstance appends LatencyReportV1 records as they

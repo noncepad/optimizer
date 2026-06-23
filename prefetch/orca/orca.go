@@ -35,13 +35,13 @@ const orcaFilePath = "orca.json"
 
 // Create queries the graph at depth 2 from the Orca program ID
 // (program → WhirlpoolConfig → Whirlpool) and parses every pool account found.
-func Create(ctx context.Context, stateClient state.Client, workingDir string) (*Orca, error) {
+func Create(ctx context.Context, stateClient state.Client, workingDir string, maxSubscriptionCount int) (*Orca, error) {
 	entry := logger.FromContext(ctx)
 	orca := new(Orca)
 	fp := filepath.Join(workingDir, orcaFilePath)
 	f, err := os.Open(fp)
 	if err != nil {
-		err = orca.fetchWhirlpool(ctx, stateClient, entry)
+		err = orca.fetchWhirlpool(ctx, stateClient, entry, maxSubscriptionCount)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load orca data: %s", err)
 		}

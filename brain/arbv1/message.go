@@ -1,4 +1,4 @@
-package helloworldv1
+package arbv1
 
 // message.go defines the stdin/stdout wire protocol between the Go brain and
 // the WASM bot. Messages are framed as catmsg.FixedPair: a 1-byte key followed
@@ -22,12 +22,12 @@ import (
 )
 
 const (
-	KeyFlagEchoRequest          uint8 = 1
-	KeyFlagEchoResponse         uint8 = 2
-	KeyFlagWallet               uint8 = 3
-	KeyFlagTxLatency            uint8 = 4
-	KeyFlagLatencyReportV1      uint8 = 5
-	KeyFlagAddressLookupTable   uint8 = 6
+	KeyFlagEchoRequest        uint8 = 1
+	KeyFlagEchoResponse       uint8 = 2
+	KeyFlagWallet             uint8 = 3
+	KeyFlagTxLatency          uint8 = 4
+	KeyFlagLatencyReportV1    uint8 = 5
+	KeyFlagAddressLookupTable uint8 = 6
 )
 
 func DoEchoRequest(payload string) catmsg.FixedPair {

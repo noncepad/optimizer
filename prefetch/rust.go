@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"git.noncepad.com/pkg/optimizer/prefetch/trading"
 )
@@ -24,7 +25,8 @@ type StaticLoader interface {
 // Build an image. Take the data from prefetch (e.g. Orca pool data) and
 // write the Json files into the Rust code base so that those files can be
 // statically compiled into the web assembly binary.
-func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, listLoader []StaticLoader) (*BotImage, error) {
+func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, listLoader []StaticLoader, liquidityLoader StaticLoader) (*BotImage, error) {
+	doneC := ctx.Done()
 	tmpdir, err := os.MkdirTemp(pf.tmpdir, "prefactor*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create logging directory: %s", err)
@@ -52,11 +54,30 @@ func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, li
 			return nil, fmt.Errorf("failed to load args: %s", err)
 		}
 	}
-	for _, loader := range listLoader {
-		// create target directory
-		err = loader.Load(filepath.Join(targetRepositoryPath, "target"), pf.trading)
+
+	{
+		targetRepo := filepath.Join(targetRepositoryPath, "target")
+		wg := &sync.WaitGroup{}
+		errorC := make(chan error, len(listLoader))
+		for _, loader := range listLoader {
+			// create target directory
+			wg.Go(func() {
+				errorC <- loader.Load(targetRepo, pf.trading)
+			})
+		}
+		for range len(listLoader) {
+			select {
+			case <-doneC:
+				err = ctx.Err()
+			case err = <-errorC:
+			}
+			if err != nil {
+				return nil, fmt.Errorf("failed to load static files: %s", err)
+			}
+		}
+		err = liquidityLoader.Load(targetRepo, pf.trading)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load static files: %s", err)
+			return nil, fmt.Errorf("failed to load liquidity static files: %s", err)
 		}
 	}
 	mEnv := make(map[string]string)

@@ -9,8 +9,7 @@ go 1.25.4
 //replace git.noncepad.com/pkg/solpipe-util => ../solpipe-util
 
 require (
-	git.noncepad.com/pkg/bot v0.4.170
-	git.noncepad.com/pkg/solpipe-util v0.4.217
+	git.noncepad.com/pkg/solpipe-util v0.4.219
 	github.com/alecthomas/kong v1.15.0
 	github.com/gagliardetto/binary v0.8.0
 	github.com/gagliardetto/solana-go v1.20.0
@@ -20,6 +19,7 @@ require (
 )
 
 require (
+	git.noncepad.com/pkg/bot v0.4.182 // indirect
 	git.noncepad.com/pkg/safejar v0.4.15 // indirect
 	git.noncepad.com/pkg/solpipe v0.4.13 // indirect
 	git.noncepad.com/pkg/util v0.4.6 // indirect

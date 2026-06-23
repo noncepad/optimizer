@@ -17,11 +17,12 @@ import (
 var defaultBotMarketID = "6VQk8GA84p7zZSyL8XtX6oVd3Vp4EJ5hoUenKoC3fHSf"
 
 type CLI struct {
-	Verbose  bool       `short:"v" env:"VERBOSE" help:"Enable debug-level logging."`
-	StateURL string     `option:"state" help:"state url."`
-	Version  VersionCmd `cmd:"version" help:"Print version."`
-	Run      RunCmd     `cmd:"run" help:"Run the optimizer mothership."`
-	Balance  BalanceCmd `cmd:"balance" help:"Get the balance for the trading wallet."`
+	Verbose  bool         `short:"v" env:"VERBOSE" help:"Enable debug-level logging."`
+	StateURL string       `option:"state" help:"state url."`
+	Version  VersionCmd   `cmd:"version" help:"Print version."`
+	Hello    HelloWoldCmd `cmd:"hello" help:"Run helloworldv1."`
+	Arb      ArbCmd       `cmd:"arb" help:"Run arbv1."`
+	Balance  BalanceCmd   `cmd:"balance" help:"Get the balance for the trading wallet."`
 }
 
 type VersionCmd struct{}

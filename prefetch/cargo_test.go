@@ -11,6 +11,7 @@ import (
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/bidder"
 	"git.noncepad.com/pkg/bot/state"
 	"git.noncepad.com/pkg/optimizer/prefetch"
+	"git.noncepad.com/pkg/optimizer/prefetch/liquidity"
 	"git.noncepad.com/pkg/optimizer/prefetch/orca"
 	"github.com/joho/godotenv"
 )
@@ -37,12 +38,13 @@ func TestOrca(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	orcaLoader, err := orca.Create(ctx, pf.State(), workDir)
+	orcaLoader, err := orca.Create(ctx, pf.State(), workDir, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
+	liquidityLoader := liquidity.Create(liquidity.DefaultConfig())
 	repoDir := os.Getenv("REPO")
-	_, err = pf.Build(ctx, repoDir, []prefetch.StaticLoader{orcaLoader})
+	_, err = pf.Build(ctx, repoDir, []prefetch.StaticLoader{orcaLoader}, liquidityLoader)
 	if err != nil {
 		t.Fatal(err)
 	}

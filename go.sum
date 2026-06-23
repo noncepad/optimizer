@@ -1,11 +1,11 @@
-git.noncepad.com/pkg/bot v0.4.170 h1:BATEV7skEzxjqiLOF0hlC5IqzrQqk+61dbC7QMwQFsw=
-git.noncepad.com/pkg/bot v0.4.170/go.mod h1:sn13io9WoOaDXpX025OykRait1Q71mEMEJhKiZHN7Q8=
+git.noncepad.com/pkg/bot v0.4.182 h1:1lJsYAZq2ykitpd0wtgEVwSluMoBczFgVHbBJ/YZxks=
+git.noncepad.com/pkg/bot v0.4.182/go.mod h1:bq8b5jSzAMBMpF9g6/9BS5MrePfEFXgZyQUi/QAwbCQ=
 git.noncepad.com/pkg/safejar v0.4.15 h1:EqUHRWnox9EnxvxSDkan4EOtx/1LA/qanOtY+fZ050I=
 git.noncepad.com/pkg/safejar v0.4.15/go.mod h1:Kh0SN2O2uD7xrXpyXcWWlcFrn6vd5v9UeOn1mAJ9F34=
 git.noncepad.com/pkg/solpipe v0.4.13 h1:kjnhZjHS8E+IsR9m9nJgRu+kTSbclRPagKjz53IT7P0=
 git.noncepad.com/pkg/solpipe v0.4.13/go.mod h1:9pXYH1ZtuS+E4MQcBJnD1N8Twv1IlOnqMXPJ+GNkmlw=
-git.noncepad.com/pkg/solpipe-util v0.4.217 h1:7MDXzD4Judci4IY4KLxJJ+7lvkIycvGDAq5pkLvC540=
-git.noncepad.com/pkg/solpipe-util v0.4.217/go.mod h1:K7VNAzWgJvNGmRoRlQPrR625mMNxt8LqlthoMoDEH5w=
+git.noncepad.com/pkg/solpipe-util v0.4.219 h1:Is/5UwcXPqv2tyxoaWjR+NelpeQAS+lXYvfe96qPERw=
+git.noncepad.com/pkg/solpipe-util v0.4.219/go.mod h1:K7VNAzWgJvNGmRoRlQPrR625mMNxt8LqlthoMoDEH5w=
 git.noncepad.com/pkg/util v0.4.6 h1:DjrWi1fLY4cTIau1M5RvLh5ipl8eDAZJ9X7pZoo/mjI=
 git.noncepad.com/pkg/util v0.4.6/go.mod h1:9QkiXpUq4vcl31OE3Wc8B3pNF3/xeRyKEuA6G3mrEQY=
 github.com/AlekSi/pointer v1.2.0 h1:glcy/gc4h8HnG2Z3ZECSzZ1IX1x2JxRVuDzaJwQE0+w=

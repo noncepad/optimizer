@@ -1,4 +1,4 @@
-package helloworldv1
+package arbv1
 
 // loopInstance runs in its own goroutine after Init completes.
 // It subscribes to the bot's stdout stream, sends an initial echo request to

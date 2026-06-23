@@ -12,6 +12,7 @@ import (
 const (
 	offTickSpacing  = 41
 	offFeeRate      = 45
+	offLiquidity    = 49 // u128 active liquidity
 	offSqrtPrice    = 65
 	offTickCurrent  = 81
 	offMintA        = 101
@@ -30,6 +31,8 @@ type Whirlpool struct {
 	VaultB           sgo.PublicKey
 	SqrtPriceHi      uint64 // high 64 bits of Q64.64 sqrt price
 	SqrtPriceLo      uint64 // low 64 bits of Q64.64 sqrt price
+	LiquidityLo      uint64 // low 64 bits of active liquidity u128
+	LiquidityHi      uint64 // high 64 bits of active liquidity u128
 	TickCurrentIndex int32
 	TickSpacing      uint16
 	FeeRate          uint16 // hundredths of a basis point (3000 = 0.3%)
@@ -51,16 +54,20 @@ func parseWhirlpool(pubkey sgo.PublicKey, data []byte) (*Whirlpool, error) {
 	if len(data) < minWhirlpoolLen {
 		return nil, fmt.Errorf("whirlpool data too short: %d < %d", len(data), minWhirlpoolLen)
 	}
-	lo := binary.LittleEndian.Uint64(data[offSqrtPrice : offSqrtPrice+8])
-	hi := binary.LittleEndian.Uint64(data[offSqrtPrice+8 : offSqrtPrice+16])
+	sqrtLo := binary.LittleEndian.Uint64(data[offSqrtPrice : offSqrtPrice+8])
+	sqrtHi := binary.LittleEndian.Uint64(data[offSqrtPrice+8 : offSqrtPrice+16])
+	liqLo := binary.LittleEndian.Uint64(data[offLiquidity : offLiquidity+8])
+	liqHi := binary.LittleEndian.Uint64(data[offLiquidity+8 : offLiquidity+16])
 	return &Whirlpool{
 		Pubkey:           pubkey,
 		TokenMintA:       sgo.PublicKeyFromBytes(data[offMintA : offMintA+32]),
 		TokenMintB:       sgo.PublicKeyFromBytes(data[offMintB : offMintB+32]),
 		VaultA:           sgo.PublicKeyFromBytes(data[offVaultA : offVaultA+32]),
 		VaultB:           sgo.PublicKeyFromBytes(data[offVaultB : offVaultB+32]),
-		SqrtPriceHi:      hi,
-		SqrtPriceLo:      lo,
+		SqrtPriceHi:      sqrtHi,
+		SqrtPriceLo:      sqrtLo,
+		LiquidityLo:      liqLo,
+		LiquidityHi:      liqHi,
 		TickCurrentIndex: int32(binary.LittleEndian.Uint32(data[offTickCurrent : offTickCurrent+4])),
 		TickSpacing:      binary.LittleEndian.Uint16(data[offTickSpacing : offTickSpacing+2]),
 		FeeRate:          binary.LittleEndian.Uint16(data[offFeeRate : offFeeRate+2]),

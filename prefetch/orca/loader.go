@@ -52,6 +52,7 @@ func (orca *Orca) Load(targetDirectory string, tp *trading.TradingPair) error {
 			MintA:  x.TokenMintA,
 			MintB:  x.TokenMintB,
 		}
+		tp.Add(x.TokenMintA, x.TokenMintB)
 		k++
 	}
 	out.List = maxList[:k]

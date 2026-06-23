@@ -3,6 +3,7 @@ package trading
 
 import (
 	"sort"
+	"sync"
 
 	sgo "github.com/gagliardetto/solana-go"
 )
@@ -12,16 +13,26 @@ type Configuration struct {
 }
 
 type TradingPair struct {
+	mx     *sync.RWMutex
 	mToken map[sgo.PublicKey]sgo.PublicKey
 }
 
 func Create() *TradingPair {
 	tp := new(TradingPair)
+	tp.mx = &sync.RWMutex{}
 	tp.mToken = make(map[sgo.PublicKey]sgo.PublicKey)
 	return tp
 }
 
+func (tp *TradingPair) Len() int {
+	tp.mx.RLock()
+	defer tp.mx.RUnlock()
+	return len(tp.mToken)
+}
+
 func (tp *TradingPair) Add(mintA, mintB sgo.PublicKey) {
+	tp.mx.Lock()
+	defer tp.mx.Unlock()
 	list := sortPubkey([]sgo.PublicKey{mintA, mintB})
 	a, b := list[0], list[1]
 	tp.mToken[a] = b
@@ -40,6 +51,8 @@ func sortPubkey(list []sgo.PublicKey) []sgo.PublicKey {
 }
 
 func (tp *TradingPair) Export(outPath string) error {
+	tp.mx.RLock()
+	defer tp.mx.RUnlock()
 	c := new(Configuration)
 	c.Pair = make([][]sgo.PublicKey, len(tp.mToken))
 	i := 0

@@ -12,12 +12,12 @@ import (
 	sgo "github.com/gagliardetto/solana-go"
 )
 
-func (orca *Orca) fetchWhirlpool(parentCtx context.Context, stateClient state.Client, logger *slog.Logger) error {
+func (orca *Orca) fetchWhirlpool(parentCtx context.Context, stateClient state.Client, logger *slog.Logger, maxSubscriptionCount int) error {
 	ctx, cancel := context.WithCancelCause(parentCtx)
 	doneC := ctx.Done()
 	errorC := make(chan error, 2)
 	poolMapC := make(chan map[sgo.PublicKey]*Whirlpool, 1)
-	go stateClient.DetachHook(errorC, createHandler(ctx, cancel, poolMapC, errorC, logger))
+	go stateClient.DetachHook(errorC, createHandler(ctx, cancel, poolMapC, errorC, logger, maxSubscriptionCount))
 	var err error
 	select {
 	case <-doneC:
@@ -43,16 +43,18 @@ func (orca *Orca) fetchWhirlpool(parentCtx context.Context, stateClient state.Cl
 }
 
 type eventHandler struct {
-	ctx      context.Context
-	cancel   context.CancelCauseFunc
-	g        graph.Graph
-	poolMapC chan<- map[sgo.PublicKey]*Whirlpool
-	errorC   chan<- error
-	slot     *atomic.Uint64
-	logger   *slog.Logger
+	ctx                  context.Context
+	cancel               context.CancelCauseFunc
+	g                    graph.Graph
+	poolMapC             chan<- map[sgo.PublicKey]*Whirlpool
+	errorC               chan<- error
+	slot                 *atomic.Uint64
+	logger               *slog.Logger
+	maxSubscriptionCount int
+	subscriber           state.SubscriptionLimiter
 }
 
-func createHandler(ctx context.Context, cancel context.CancelCauseFunc, poolMapC chan<- map[sgo.PublicKey]*Whirlpool, errorC chan<- error, logger *slog.Logger) graph.Hook {
+func createHandler(ctx context.Context, cancel context.CancelCauseFunc, poolMapC chan<- map[sgo.PublicKey]*Whirlpool, errorC chan<- error, logger *slog.Logger, maxSubscriptionCount int) graph.Hook {
 	eh := new(eventHandler)
 	eh.ctx = ctx
 	eh.cancel = cancel
@@ -61,7 +63,7 @@ func createHandler(ctx context.Context, cancel context.CancelCauseFunc, poolMapC
 	eh.logger = logger
 	eh.slot = &atomic.Uint64{}
 	eh.slot.Store(0)
-
+	eh.maxSubscriptionCount = maxSubscriptionCount
 	return eh
 }
 
@@ -80,22 +82,23 @@ func (handler *eventHandler) Init(g graph.Graph) error {
 	handler.g = g
 	// fetch whirlpool configs and whirlpools
 	ctx, cancel := context.WithCancel(handler.ctx)
-	ackC := g.Subscribe(ctx, ProgramID, graph.WeightAll, 2)
+	handler.subscriber = state.CreateLimiter(handler.ctx, g, handler.maxSubscriptionCount)
+	ackC := handler.subscriber.Subscribe(ctx, ProgramID, graph.WeightAll, 2)
 	go func() {
 		doneC := ctx.Done()
 		select {
 		case <-doneC:
 		case <-ackC:
 			cancel()
-			loopOnAck(handler.ctx, handler.cancel, handler.poolMapC, handler.errorC, g, handler.slot, handler.logger)
+			loopOnAck(handler.ctx, handler.cancel, handler.poolMapC, handler.errorC, handler.subscriber, handler.slot, handler.logger)
 		}
 	}()
 	handler.logger.Warn("...........Init...................")
 	return nil
 }
 
-func loopOnAck(ctx context.Context, cancel context.CancelCauseFunc, emC chan<- map[sgo.PublicKey]*Whirlpool, errorC chan<- error, g graph.Graph, slot *atomic.Uint64, logger *slog.Logger) {
-	em := g.EdgeManager()
+func loopOnAck(ctx context.Context, cancel context.CancelCauseFunc, emC chan<- map[sgo.PublicKey]*Whirlpool, errorC chan<- error, subscriber state.SubscriptionLimiter, slot *atomic.Uint64, logger *slog.Logger) {
+	em := subscriber.EdgeManager()
 	// we are missing token accounts
 	em.RLock()
 	mConfigDown := em.EdgeDown(ProgramID)
@@ -125,7 +128,7 @@ out1:
 		}
 		configCtx, configCancel := context.WithCancel(ctx)
 		logger.Warn(fmt.Sprintf("...........Config %s %d/%d sending", configPubkey, configI, len(mConfigDown)))
-		configAckC := g.Subscribe(configCtx, configPubkey, graph.WeightAll, 2)
+		configAckC := subscriber.Subscribe(configCtx, configPubkey, graph.WeightAll, 2)
 		logger.Warn(fmt.Sprintf("...........Config %s %d/%d sent", configPubkey, configI, len(mConfigDown)))
 		doneC2 := configCtx.Done()
 		select {

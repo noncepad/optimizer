@@ -27,7 +27,8 @@ func TestPool(t *testing.T) {
 		client = state.New(ctx, dialer, 30*time.Second)
 	}
 	workingDir := t.TempDir()
-	orcaFetcher, err := orca.Create(ctx, client, workingDir)
+	maxSubscriptionCount := 1
+	orcaFetcher, err := orca.Create(ctx, client, workingDir, maxSubscriptionCount)
 	if err != nil {
 		t.Fatal(err)
 	}

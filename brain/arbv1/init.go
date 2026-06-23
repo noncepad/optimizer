@@ -1,88 +1,20 @@
-// Package helloworldv1 is the Go-side orchestrator for the helloworldv1 bot mode.
-//
-// It implements the brain.Brain interface and is responsible for:
-//   - Allocating a slot on a Catscope/Solpipe validator pipeline (bid = 0, free tier).
-//   - Uploading a WASM bot image to the validator with MODE=helloworldv1.
-//   - Completing the handshake with the running bot instance.
-//   - Sending the child trading keypair to the bot via stdin so the bot can sign
-//     transactions independently.
-//   - Reading LatencyReportV1 structs from the bot's stdout and writing them to a
-//     CSV-style latency log file for offline analysis.
-//
-// This brain performs no live trading; the wallet-funding logic in Evaluate is
-// disabled (if false). Its primary purpose is to verify the full Go↔WASM
-// communication pipeline and measure validator-side latency.
-package helloworldv1
+package arbv1
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
 	"os"
 	"time"
 
 	mgrbot "git.noncepad.com/pkg/bot/catscope"
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/bidder"
-	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/brain"
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/common"
 	"git.noncepad.com/pkg/bot/txbuilder"
-	"git.noncepad.com/pkg/optimizer/util"
 	"git.noncepad.com/pkg/solpipe-util/graph"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	sgo "github.com/gagliardetto/solana-go"
 )
-
-type eventHook struct {
-	ctx         context.Context
-	cancel      context.CancelCauseFunc
-	logger      *slog.Logger
-	graph       graph.Graph
-	bidmgr      *bidder.BidderManager
-	addressBook common.BotClientDialer
-	builder     *txbuilder.BuildManager
-	authorizer  sgo.PublicKey
-	botMarketID sgo.PublicKey
-	parentKey   sgo.PrivateKey
-	childKey    sgo.PrivateKey
-	handshake   *mgrbot.Handshake
-	instance    *mgrbot.Bot
-	wallet      *walletInfo
-	config      *Configuration
-	state       *pendingState
-	latencyFile io.Writer
-}
-type Configuration struct {
-	BotImage        string
-	LatencyFilePath string
-}
-
-// Create creates a helloworld gRPC event hook.
-func Create(ctx context.Context, cancel context.CancelCauseFunc, parentKey sgo.PrivateKey, config *Configuration) (brain.Brain, error) {
-	entry := util.LoggerBrainSimple.Fields(logger.FromContext(ctx))
-	var writer io.Writer
-	var err error
-	if 0 < len(config.LatencyFilePath) {
-		var f *os.File
-		f, err = os.Create(config.LatencyFilePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open latency log path")
-		}
-		writer = bufio.NewWriter(f)
-	}
-	return &eventHook{
-		ctx:         logger.ToContext(ctx, entry),
-		cancel:      cancel,
-		logger:      entry,
-		parentKey:   parentKey,
-		wallet:      createWallet(),
-		config:      config,
-		state:       createPendingState(),
-		latencyFile: writer,
-	}, nil
-}
 
 // Init is where we set a Pipeline allocation.  In this case, we just want to
 // connect to a single Pipeline (ie Validator selling bot runtime capacity).
@@ -119,7 +51,7 @@ func (hs *eventHook) Init(g graph.Graph, builder *txbuilder.BuildManager, addres
 	entry.With(logger.Loc("init", 3)).Info("setting allocation; waiting for bidder proxy to connect with pipeline")
 
 	mEnv := make(map[string]string, 1)
-	mEnv["MODE"] = "helloworldv1"
+	mEnv["MODE"] = "arbv1"
 	var botImage mgrbot.Image
 	if 0 < len(hs.config.BotImage) {
 		// compile a bot locally
@@ -187,25 +119,4 @@ botdone:
 	hs.instance = new(mgrbot.Bot)
 	*hs.instance = instance
 	return hs.initWallet()
-}
-
-func (hs *eventHook) useLocalImage(ctx context.Context, fp string, mEnv map[string]string) (mgrbot.Image, error) {
-	image, err := mgrbot.Load(ctx, hs.parentKey, hs.botMarketID, fp, hs.addressBook, hs.builder, [2]int{1, 2}, mEnv)
-	if err != nil {
-		return mgrbot.Image{}, fmt.Errorf("failed to load image: %s", err)
-	}
-	return image, nil
-}
-
-// downloadDefaultImage tbd
-func (hs *eventHook) downloadDefaultImage(ctx context.Context) (mgrbot.Image, error) {
-	fp, err := util.DownloadCatscopeRustBotDemonstrator(ctx)
-	if err != nil {
-		return mgrbot.Image{}, fmt.Errorf("bot download failed: %s", err)
-	}
-	image, err := mgrbot.Load(ctx, hs.parentKey, hs.botMarketID, fp, hs.addressBook, hs.builder, [2]int{1, 2}, nil)
-	if err != nil {
-		return mgrbot.Image{}, fmt.Errorf("failed to load image: %s", err)
-	}
-	return image, nil
 }
