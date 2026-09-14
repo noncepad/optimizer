@@ -12,13 +12,23 @@ import (
 	"git.noncepad.com/pkg/bot/state"
 	"git.noncepad.com/pkg/optimizer/prefetch"
 	"git.noncepad.com/pkg/optimizer/prefetch/liquidity"
+	"git.noncepad.com/pkg/optimizer/prefetch/mintinfo"
 	"git.noncepad.com/pkg/optimizer/prefetch/orca"
+	"git.noncepad.com/pkg/optimizer/store"
 	"github.com/joho/godotenv"
 )
 
 func TestOrca(t *testing.T) {
 	workDir := t.TempDir()
-	err := godotenv.Load("../.env")
+	dbFp := filepath.Join(workDir, "prefetch.db")
+	s, err := store.Open(dbFp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = s.Close()
+	}()
+	err = godotenv.Load("../.env")
 	if err != nil {
 		t.Log(err)
 	}
@@ -34,17 +44,22 @@ func TestOrca(t *testing.T) {
 		client = state.New(ctx, dialer, 30*time.Second)
 	}
 	wg := &sync.WaitGroup{}
-	pf, err := prefetch.Create(ctx, wg, client)
+
+	pf, err := prefetch.Create(ctx, wg, client, s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	orcaLoader, err := orca.Create(ctx, pf.State(), workDir, 1)
+	mintTracker, err := mintinfo.New(s.DB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = orca.Create(ctx, pf.State(), s.DB(), 1, false, mintTracker)
 	if err != nil {
 		t.Fatal(err)
 	}
 	liquidityLoader := liquidity.Create(liquidity.DefaultConfig())
 	repoDir := os.Getenv("REPO")
-	_, err = pf.Build(ctx, repoDir, []prefetch.StaticLoader{orcaLoader}, liquidityLoader)
+	_, err = pf.Build(ctx, repoDir, liquidityLoader)
 	if err != nil {
 		t.Fatal(err)
 	}

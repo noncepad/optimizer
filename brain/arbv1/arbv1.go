@@ -17,6 +17,7 @@ package arbv1
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -27,6 +28,7 @@ import (
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/brain"
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/common"
 	"git.noncepad.com/pkg/bot/txbuilder"
+	"git.noncepad.com/pkg/optimizer/bundler"
 	"git.noncepad.com/pkg/optimizer/util"
 	"git.noncepad.com/pkg/solpipe-util/graph"
 	"git.noncepad.com/pkg/solpipe-util/logger"
@@ -51,14 +53,28 @@ type eventHook struct {
 	config      *Configuration
 	state       *pendingState
 	latencyFile io.Writer
+	// db is the shared prefetch.db connection, used to persist the bot's
+	// periodic account-usage reports (KeyFlagCommonAccountUsage) into
+	// account_usage -- see optimizer/prefetch/alt.
+	db *sql.DB
 }
 type Configuration struct {
 	BotImage        string
 	LatencyFilePath string
 }
 
+// Hook is brain.Brain plus SendBundlerTipUpdate -- returned instead of a
+// bare brain.Brain so cmd/*.go can call SendBundlerTipUpdate on the same
+// instance it hands to mothership.Create (a Hook value is itself a valid
+// brain.Brain, since this interface embeds it). Mirrors
+// testperpv1.Hook's own reasoning for its trigger-sender methods.
+type Hook interface {
+	brain.Brain
+	SendBundlerTipUpdate(update bundler.TipUpdate) error
+}
+
 // Create creates a helloworld gRPC event hook.
-func Create(ctx context.Context, cancel context.CancelCauseFunc, parentKey sgo.PrivateKey, config *Configuration) (brain.Brain, error) {
+func Create(ctx context.Context, cancel context.CancelCauseFunc, parentKey sgo.PrivateKey, config *Configuration, db *sql.DB) (Hook, error) {
 	entry := util.LoggerBrainSimple.Fields(logger.FromContext(ctx))
 	var writer io.Writer
 	var err error
@@ -79,6 +95,7 @@ func Create(ctx context.Context, cancel context.CancelCauseFunc, parentKey sgo.P
 		config:      config,
 		state:       createPendingState(),
 		latencyFile: writer,
+		db:          db,
 	}, nil
 }
 

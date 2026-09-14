@@ -1,11 +1,14 @@
+// Package clmm tracks clmm
 package clmm
 
 import (
 	"context"
+	"database/sql"
 	"encoding/binary"
 	"fmt"
 
 	"git.noncepad.com/pkg/bot/state"
+	"git.noncepad.com/pkg/optimizer/prefetch/mintinfo"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	sgo "github.com/gagliardetto/solana-go"
 	sgotkn "github.com/gagliardetto/solana-go/programs/token"
@@ -16,6 +19,7 @@ var (
 	DiscPoolState = [8]byte{247, 237, 227, 245, 215, 195, 222, 70}
 	DiscAmmConfig = [8]byte{218, 244, 33, 104, 203, 203, 43, 111}
 )
+var ProgramID = sgo.MustPublicKeyFromBase58("CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK")
 
 // Body sizes (excluding the 8-byte Anchor discriminator).
 const (
@@ -31,73 +35,73 @@ type U128 struct {
 
 // RewardInfo mirrors the Raydium CLMM RewardInfo struct (repr(C, packed), 169 bytes).
 type RewardInfo struct {
-	RewardState             uint8
-	OpenTime                uint64
-	EndTime                 uint64
-	LastUpdateTime          uint64
-	EmissionsPerSecondX64   U128
-	RewardTotalEmitted      uint64
-	RewardClaimed           uint64
-	TokenMint               sgo.PublicKey
-	TokenVault              sgo.PublicKey
-	Authority               sgo.PublicKey
-	RewardGrowthGlobalX64   U128
+	RewardState           uint8
+	OpenTime              uint64
+	EndTime               uint64
+	LastUpdateTime        uint64
+	EmissionsPerSecondX64 U128
+	RewardTotalEmitted    uint64
+	RewardClaimed         uint64
+	TokenMint             sgo.PublicKey
+	TokenVault            sgo.PublicKey
+	Authority             sgo.PublicKey
+	RewardGrowthGlobalX64 U128
 }
 
 // DynamicFeeInfo mirrors the Raydium CLMM DynamicFeeInfo struct (repr(C, packed), 80 bytes).
 type DynamicFeeInfo struct {
-	FilterPeriod               uint16
-	DecayPeriod                uint16
-	ReductionFactor            uint16
-	DynamicFeeControl          uint32
-	MaxVolatilityAccumulator   uint32
-	TickSpacingIndexReference  int32
-	VolatilityReference        uint32
-	VolatilityAccumulator      uint32
-	LastUpdateTimestamp        uint64
+	FilterPeriod              uint16
+	DecayPeriod               uint16
+	ReductionFactor           uint16
+	DynamicFeeControl         uint32
+	MaxVolatilityAccumulator  uint32
+	TickSpacingIndexReference int32
+	VolatilityReference       uint32
+	VolatilityAccumulator     uint32
+	LastUpdateTimestamp       uint64
 }
 
 // PoolState mirrors the Raydium CLMM PoolState struct (repr(C, packed), 1536 bytes after discriminator).
 // Source: https://github.com/raydium-io/raydium-clmm/blob/master/programs/amm/src/states/pool.rs
 type PoolState struct {
-	Bump             uint8
-	AmmConfig        sgo.PublicKey
-	Owner            sgo.PublicKey
-	TokenMint0       sgo.PublicKey
-	TokenMint1       sgo.PublicKey
-	TokenVault0      sgo.PublicKey
-	TokenVault1      sgo.PublicKey
-	ObservationKey   sgo.PublicKey
-	MintDecimals0    uint8
-	MintDecimals1    uint8
-	TickSpacing      uint16
-	Liquidity        U128
-	SqrtPriceX64    U128
-	TickCurrent      int32
+	Bump                uint8
+	AmmConfig           sgo.PublicKey
+	Owner               sgo.PublicKey
+	TokenMint0          sgo.PublicKey
+	TokenMint1          sgo.PublicKey
+	TokenVault0         sgo.PublicKey
+	TokenVault1         sgo.PublicKey
+	ObservationKey      sgo.PublicKey
+	MintDecimals0       uint8
+	MintDecimals1       uint8
+	TickSpacing         uint16
+	Liquidity           U128
+	SqrtPriceX64        U128
+	TickCurrent         int32
 	FeeGrowthGlobal0X64 U128
 	FeeGrowthGlobal1X64 U128
 	ProtocolFeesToken0  uint64
 	ProtocolFeesToken1  uint64
-	Status           uint8
-	FeeOn            uint8
-	RewardInfos      [3]RewardInfo
-	FundFeesToken0   uint64
-	FundFeesToken1   uint64
-	OpenTime         uint64
-	RecentEpoch      uint64
-	DynamicFeeInfo   DynamicFeeInfo
+	Status              uint8
+	FeeOn               uint8
+	RewardInfos         [3]RewardInfo
+	FundFeesToken0      uint64
+	FundFeesToken1      uint64
+	OpenTime            uint64
+	RecentEpoch         uint64
+	DynamicFeeInfo      DynamicFeeInfo
 }
 
 // AmmConfig mirrors the Raydium CLMM AmmConfig struct (repr(C, packed), 109 bytes after discriminator).
 type AmmConfig struct {
-	Bump              uint8
-	Index             uint16
-	Owner             sgo.PublicKey
-	ProtocolFeeRate   uint32
-	TradeFeeRate      uint32
-	TickSpacing       uint16
-	FundFeeRate       uint32
-	FundOwner         sgo.PublicKey
+	Bump            uint8
+	Index           uint16
+	Owner           sgo.PublicKey
+	ProtocolFeeRate uint32
+	TradeFeeRate    uint32
+	TickSpacing     uint16
+	FundFeeRate     uint32
+	FundOwner       sgo.PublicKey
 }
 
 // PoolStateWithToken bundles a parsed pool state with its fetched vault balances.
@@ -107,17 +111,19 @@ type PoolStateWithToken struct {
 	TokenVault1 *sgotkn.Account
 }
 
-// Summary is the compact, JSON-serialisable view of a CLMM pool.
-type Summary struct {
-	Pubkey      sgo.PublicKey `json:"pubkey"`
-	Mint0       sgo.PublicKey `json:"mint_0"`
-	Mint1       sgo.PublicKey `json:"mint_1"`
-	FeeRatePips uint32        `json:"fee_rate_pips"`
+// Amm bundles a parsed AmmConfig with the pools discovered under it. Only
+// referenced by the (currently unpopulated) Configuration type below --
+// event.go's eventHandler stopped using this shape once pool/vault
+// bookkeeping moved to DB-backed lookups (see isConfigFresh/isPoolFresh/
+// findPoolByVault).
+type Amm struct {
+	Config *AmmConfig
+	MPool  map[sgo.PublicKey]*PoolStateWithToken
 }
 
 // Configuration is the result of a completed CLMM pool download.
 type Configuration struct {
-	List []*Summary `json:"list"`
+	List map[sgo.PublicKey]*Amm `json:"list"`
 }
 
 func u8(data []byte, off int) uint8 {
@@ -241,30 +247,27 @@ func ParseAmmConfig(id sgo.PublicKey, body []byte) (*AmmConfig, error) {
 func Download(
 	parentCtx context.Context,
 	stateClient state.Client,
-) (*Configuration, error) {
+	db *sql.DB,
+	maxSubscriptionCount int,
+	force bool,
+	mintTracker *mintinfo.Tracker,
+) error {
 	entry := logger.FromContext(parentCtx)
-	ctx, cancel := context.WithCancelCause(parentCtx)
-	poolMapC := make(chan map[sgo.PublicKey]*PoolStateWithToken, 1)
-	errorC := make(chan error, 1)
-	handler := createHandler(ctx, sgo.SysVarClockPubkey, cancel, poolMapC, errorC, entry)
-	_ = stateClient.Hook(handler)
-
-	select {
-	case err := <-errorC:
-		return nil, err
-	case x := <-poolMapC:
-		ans := new(Configuration)
-		ans.List = make([]*Summary, len(x))
-		i := 0
-		for pk, v := range x {
-			ans.List[i] = &Summary{
-				Pubkey:      pk,
-				Mint0:       v.Info.TokenMint0,
-				Mint1:       v.Info.TokenMint1,
-				FeeRatePips: 0, // AmmConfig not fetched during download
-			}
-			i++
-		}
-		return ans, nil
+	n, err := poolCount(db)
+	if err != nil {
+		return fmt.Errorf("clmm: check pool count: %w", err)
 	}
+	if n > 0 && !force {
+		entry.Info(fmt.Sprintf("clmm: %d pools already in db, skipping fetch", n))
+		return nil
+	}
+	ctx, cancel := context.WithCancelCause(parentCtx)
+	handler := createHandler(ctx, cancel, entry, maxSubscriptionCount, db, mintTracker)
+	err = stateClient.Hook(handler)
+	cancel(err)
+	if err != nil {
+		handler.logger.Error(fmt.Sprintf("cause err %s", err))
+		return fmt.Errorf("hook failed: %s", err)
+	}
+	return nil
 }

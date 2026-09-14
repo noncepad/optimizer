@@ -3,10 +3,8 @@ package kamino
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"git.noncepad.com/pkg/bot/state"
 	"git.noncepad.com/pkg/solpipe-util/logger"
@@ -29,35 +27,29 @@ type Kamino struct {
 	mReserve map[sgo.PublicKey]int
 }
 
-const kaminoFilePath = "kamino.json"
-
-// Create queries the Kamino Lending program at depth 2 (program → lending market → reserve)
-// and collects all reserve accounts.
-func Create(ctx context.Context, stateClient state.Client, workingDir string) (*Kamino, error) {
+// Create queries the Kamino Lending program at depth 2 (program → lending
+// market → reserve) and collects all reserve accounts, persisting results to
+// db (kamino_reserve). If db already has reserves from a previous run,
+// they're loaded back instead of re-fetching, unless force is true.
+func Create(ctx context.Context, stateClient state.Client, db *sql.DB, force bool) (*Kamino, error) {
 	entry := logger.FromContext(ctx)
 	k := new(Kamino)
-	fp := filepath.Join(workingDir, kaminoFilePath)
-	f, err := os.Open(fp)
+	n, err := reserveCount(db)
 	if err != nil {
-		err = k.fetch(ctx, stateClient, entry)
-		if err != nil {
+		return nil, fmt.Errorf("failed to check kamino reserve count: %s", err)
+	}
+	if n == 0 || force {
+		if err = k.fetch(ctx, stateClient, entry); err != nil {
 			return nil, fmt.Errorf("failed to load kamino data: %s", err)
 		}
-		f, err = os.Create(fp)
-		if err != nil {
-			return nil, fmt.Errorf("failed to save kamino data to %s: %s", fp, err)
+		if err = insertReserves(db, k.Reserves); err != nil {
+			return nil, fmt.Errorf("failed to save kamino data: %s", err)
 		}
-		err = json.NewEncoder(f).Encode(k)
-		_ = f.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed to save kamino to file %s: %s", fp, err)
-		}
-	} else {
-		err = json.NewDecoder(f).Decode(k)
-		_ = f.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed to load kamino from %s: %s", fp, err)
-		}
+		return k, nil
+	}
+	k.Reserves, k.mReserve, err = loadReserves(db)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load kamino data from db: %s", err)
 	}
 	return k, nil
 }

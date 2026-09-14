@@ -3,12 +3,11 @@ package orca
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"git.noncepad.com/pkg/bot/state"
+	"git.noncepad.com/pkg/optimizer/prefetch/mintinfo"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	sgo "github.com/gagliardetto/solana-go"
 )
@@ -31,35 +30,27 @@ type Orca struct {
 	mPool map[sgo.PublicKey]int
 }
 
-const orcaFilePath = "orca.json"
-
 // Create queries the graph at depth 2 from the Orca program ID
-// (program → WhirlpoolConfig → Whirlpool) and parses every pool account found.
-func Create(ctx context.Context, stateClient state.Client, workingDir string, maxSubscriptionCount int) (*Orca, error) {
+// (program → WhirlpoolConfig → Whirlpool) and parses every pool account
+// found, persisting results to db (orca_whirlpool_pool). If db already has
+// pools from a previous run, they're loaded back instead of re-fetching,
+// unless force is true.
+func Create(ctx context.Context, stateClient state.Client, db *sql.DB, maxSubscriptionCount int, force bool, mintTracker *mintinfo.Tracker) (*Orca, error) {
 	entry := logger.FromContext(ctx)
 	orca := new(Orca)
-	fp := filepath.Join(workingDir, orcaFilePath)
-	f, err := os.Open(fp)
+	n, err := poolCount(db)
 	if err != nil {
-		err = orca.fetchWhirlpool(ctx, stateClient, entry, maxSubscriptionCount)
-		if err != nil {
+		return nil, fmt.Errorf("failed to check orca pool count: %s", err)
+	}
+	if n == 0 || force {
+		if err = orca.fetchWhirlpool(ctx, stateClient, entry, maxSubscriptionCount, db, mintTracker, force); err != nil {
 			return nil, fmt.Errorf("failed to load orca data: %s", err)
 		}
-		f, err = os.Create(fp)
-		if err != nil {
-			return nil, fmt.Errorf("failed to save orca data to %s: %s", fp, err)
-		}
-		err = json.NewEncoder(f).Encode(orca)
-		_ = f.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed to save orca to file %s: %s", fp, err)
-		}
-	} else {
-		err = json.NewDecoder(f).Decode(orca)
-		_ = f.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed to load orca from %s: %s", fp, err)
-		}
+		return orca, nil
+	}
+	orca.Pools, orca.mPool, err = loadPools(db)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load orca data from db: %s", err)
 	}
 	return orca, nil
 }

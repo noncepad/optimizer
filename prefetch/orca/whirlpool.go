@@ -10,8 +10,9 @@ import (
 
 // Account layout offsets (from start of account data, including 8-byte discriminator).
 const (
-	offTickSpacing  = 41
-	offFeeRate      = 45
+	offWhirlpoolsConfig = 8
+	offTickSpacing      = 41
+	offFeeRate          = 45
 	offLiquidity    = 49 // u128 active liquidity
 	offSqrtPrice    = 65
 	offTickCurrent  = 81
@@ -22,9 +23,28 @@ const (
 	minWhirlpoolLen = offVaultB + 32 // 245
 )
 
+// WhirlpoolConfig offsets (discriminator included, Anchor-serialised).
+const (
+	offCfgFeeAuthority                 = 8
+	offCfgCollectProtocolFeesAuthority = 40
+	offCfgRewardEmissionsSuperAuthority = 72
+	offCfgDefaultProtocolFeeRate       = 104
+	minWhirlpoolConfigLen              = offCfgDefaultProtocolFeeRate + 2 // 106
+)
+
+// WhirlpoolConfig is the parsed state of an Orca WhirlpoolsConfig account.
+type WhirlpoolConfig struct {
+	Pubkey                       sgo.PublicKey
+	FeeAuthority                 sgo.PublicKey
+	CollectProtocolFeesAuthority sgo.PublicKey
+	RewardEmissionsSuperAuthority sgo.PublicKey
+	DefaultProtocolFeeRate       uint16
+}
+
 // Whirlpool is the parsed state of an Orca Whirlpool concentrated-liquidity pool.
 type Whirlpool struct {
 	Pubkey           sgo.PublicKey
+	WhirlpoolsConfig sgo.PublicKey
 	TokenMintA       sgo.PublicKey
 	TokenMintB       sgo.PublicKey
 	VaultA           sgo.PublicKey
@@ -50,6 +70,19 @@ func (w *Whirlpool) FeeBps() uint16 {
 	return w.FeeRate / 100
 }
 
+func parseWhirlpoolConfig(pubkey sgo.PublicKey, data []byte) (*WhirlpoolConfig, error) {
+	if len(data) < minWhirlpoolConfigLen {
+		return nil, fmt.Errorf("whirlpool config data too short: %d < %d", len(data), minWhirlpoolConfigLen)
+	}
+	return &WhirlpoolConfig{
+		Pubkey:                        pubkey,
+		FeeAuthority:                  sgo.PublicKeyFromBytes(data[offCfgFeeAuthority : offCfgFeeAuthority+32]),
+		CollectProtocolFeesAuthority:  sgo.PublicKeyFromBytes(data[offCfgCollectProtocolFeesAuthority : offCfgCollectProtocolFeesAuthority+32]),
+		RewardEmissionsSuperAuthority: sgo.PublicKeyFromBytes(data[offCfgRewardEmissionsSuperAuthority : offCfgRewardEmissionsSuperAuthority+32]),
+		DefaultProtocolFeeRate:        binary.LittleEndian.Uint16(data[offCfgDefaultProtocolFeeRate : offCfgDefaultProtocolFeeRate+2]),
+	}, nil
+}
+
 func parseWhirlpool(pubkey sgo.PublicKey, data []byte) (*Whirlpool, error) {
 	if len(data) < minWhirlpoolLen {
 		return nil, fmt.Errorf("whirlpool data too short: %d < %d", len(data), minWhirlpoolLen)
@@ -60,6 +93,7 @@ func parseWhirlpool(pubkey sgo.PublicKey, data []byte) (*Whirlpool, error) {
 	liqHi := binary.LittleEndian.Uint64(data[offLiquidity+8 : offLiquidity+16])
 	return &Whirlpool{
 		Pubkey:           pubkey,
+		WhirlpoolsConfig: sgo.PublicKeyFromBytes(data[offWhirlpoolsConfig : offWhirlpoolsConfig+32]),
 		TokenMintA:       sgo.PublicKeyFromBytes(data[offMintA : offMintA+32]),
 		TokenMintB:       sgo.PublicKeyFromBytes(data[offMintB : offMintB+32]),
 		VaultA:           sgo.PublicKeyFromBytes(data[offVaultA : offVaultA+32]),

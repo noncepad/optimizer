@@ -10,8 +10,15 @@ package arbv1
 //   KeyFlagAddressLookupTable (6) — ALT pubkey + account list for transaction building.
 //
 // Key flags (bot→Go via stdout):
-//   KeyFlagEchoResponse (2)       — pong reply to an echo request.
-//   KeyFlagLatencyReportV1 (5)    — 72-byte performance snapshot (account/tx rates, latency).
+//   KeyFlagEchoResponse (2)         — pong reply to an echo request.
+//   KeyFlagLatencyReportV1 (5)      — 72-byte performance snapshot (account/tx rates, latency).
+//   KeyFlagCommonAccountUsage (200) — shared, cross-strategy: the bot's
+//                            most-referenced accounts, NOT a per-strategy
+//                            key -- must match catscope-rust-bot's
+//                            src/message.rs COMMON_KEY_FLAG_ACCOUNT_USAGE
+//                            exactly and never collide with a
+//                            per-strategy key (every per-strategy scheme
+//                            in this codebase stays below 100).
 
 import (
 	"fmt"
@@ -28,6 +35,9 @@ const (
 	KeyFlagTxLatency          uint8 = 4
 	KeyFlagLatencyReportV1    uint8 = 5
 	KeyFlagAddressLookupTable uint8 = 6
+	// KeyFlagCommonAccountUsage is shared across every brain/* package
+	// (not just this one) -- see the doc comment above.
+	KeyFlagCommonAccountUsage uint8 = 200
 )
 
 func DoEchoRequest(payload string) catmsg.FixedPair {

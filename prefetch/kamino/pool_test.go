@@ -10,6 +10,7 @@ import (
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/bidder"
 	"git.noncepad.com/pkg/bot/state"
 	"git.noncepad.com/pkg/optimizer/prefetch/kamino"
+	"git.noncepad.com/pkg/optimizer/store"
 )
 
 func TestReserves(t *testing.T) {
@@ -24,8 +25,14 @@ func TestReserves(t *testing.T) {
 		dialer := state.DefaultDialer(stateAddr)
 		client = state.New(ctx, dialer, 30*time.Second)
 	}
-	workingDir := t.TempDir()
-	fetcher, err := kamino.Create(ctx, client, workingDir)
+	s, err := store.Open(filepath.Join(t.TempDir(), "prefetch.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = s.Close()
+	}()
+	fetcher, err := kamino.Create(ctx, client, s.DB(), false)
 	if err != nil {
 		t.Fatal(err)
 	}

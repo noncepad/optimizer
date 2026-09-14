@@ -3,10 +3,8 @@ package sanctum
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"git.noncepad.com/pkg/bot/state"
 	"git.noncepad.com/pkg/solpipe-util/logger"
@@ -22,34 +20,29 @@ type Sanctum struct {
 	Lsts []*LstEntry
 }
 
-const sanctumFilePath = "sanctum_fetch.json"
-
-// Create queries the Sanctum S Controller PDAs and parses LST entries.
-func Create(ctx context.Context, stateClient state.Client, workingDir string) (*Sanctum, error) {
+// Create queries the Sanctum S Controller PDAs and parses LST entries,
+// persisting results to db (sanctum_lst). If db already has LSTs from a
+// previous run, they're loaded back instead of re-fetching, unless force is
+// true.
+func Create(ctx context.Context, stateClient state.Client, db *sql.DB, force bool) (*Sanctum, error) {
 	entry := logger.FromContext(ctx)
 	s := new(Sanctum)
-	fp := filepath.Join(workingDir, sanctumFilePath)
-	f, err := os.Open(fp)
+	n, err := lstCount(db)
 	if err != nil {
-		err = s.fetch(ctx, stateClient, entry)
-		if err != nil {
+		return nil, fmt.Errorf("failed to check sanctum lst count: %s", err)
+	}
+	if n == 0 || force {
+		if err = s.fetch(ctx, stateClient, entry); err != nil {
 			return nil, fmt.Errorf("failed to load sanctum data: %s", err)
 		}
-		f, err = os.Create(fp)
-		if err != nil {
-			return nil, fmt.Errorf("failed to save sanctum data to %s: %s", fp, err)
+		if err = insertLsts(db, s.Lsts); err != nil {
+			return nil, fmt.Errorf("failed to save sanctum data: %s", err)
 		}
-		err = json.NewEncoder(f).Encode(s)
-		_ = f.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed to save sanctum to file %s: %s", fp, err)
-		}
-	} else {
-		err = json.NewDecoder(f).Decode(s)
-		_ = f.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed to load sanctum from %s: %s", fp, err)
-		}
+		return s, nil
+	}
+	s.Lsts, err = loadLsts(db)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load sanctum data from db: %s", err)
 	}
 	return s, nil
 }

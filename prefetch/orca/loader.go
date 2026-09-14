@@ -2,24 +2,8 @@ package orca
 
 import (
 	"encoding/binary"
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
 
-	"git.noncepad.com/pkg/optimizer/prefetch/trading"
-	sgo "github.com/gagliardetto/solana-go"
-)
-
-type (
-	PoolConfiguration struct {
-		List []*WhirlpoolConfiguration `json:"list"`
-	}
-	WhirlpoolConfiguration struct {
-		Pubkey sgo.PublicKey `json:"pubkey"`
-		MintA  sgo.PublicKey `json:"mint_a"`
-		MintB  sgo.PublicKey `json:"mint_b"`
-	}
+	_ "modernc.org/sqlite"
 )
 
 func (orca *Orca) Args(args []string) ([]string, error) {
@@ -38,36 +22,6 @@ func vaultBalance(data []byte) uint64 {
 		return 0
 	}
 	return binary.LittleEndian.Uint64(data[amountOffset : amountOffset+8])
-}
-
-// Load put in files that can be statically compiled into the wasm bot
-func (orca *Orca) Load(targetDirectory string, tp *trading.TradingPair) error {
-	fp := filepath.Join(targetDirectory, "orca.json")
-	out := new(PoolConfiguration)
-	maxList := make([]*WhirlpoolConfiguration, len(orca.Pools))
-	k := 0
-	for _, x := range orca.Pools {
-		maxList[k] = &WhirlpoolConfiguration{
-			Pubkey: x.Pubkey,
-			MintA:  x.TokenMintA,
-			MintB:  x.TokenMintB,
-		}
-		tp.Add(x.TokenMintA, x.TokenMintB)
-		k++
-	}
-	out.List = maxList[:k]
-	f, err := os.Create(fp)
-	if err != nil {
-		return fmt.Errorf("failed to create orca.json file: %s", err)
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-	err = json.NewEncoder(f).Encode(out)
-	if err != nil {
-		return fmt.Errorf("failed to serialized orca.json: %s", err)
-	}
-	return nil
 }
 
 func (orca *Orca) Env(mEnv map[string]string) error {

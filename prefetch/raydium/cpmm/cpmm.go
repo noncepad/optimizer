@@ -1,14 +1,16 @@
+// Package cpmm tracks cpmm
 package cpmm
 
 import (
 	"context"
+	"database/sql"
 	"encoding/binary"
 	"fmt"
 
 	"git.noncepad.com/pkg/bot/state"
+	"git.noncepad.com/pkg/optimizer/prefetch/mintinfo"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	sgo "github.com/gagliardetto/solana-go"
-	sgotkn "github.com/gagliardetto/solana-go/programs/token"
 )
 
 // Anchor discriminators: sha256("account:<TypeName>")[0..8]
@@ -22,6 +24,8 @@ const (
 	PoolStateBodySize = 629
 	AmmConfigBodySize = 228
 )
+
+var ProgramID = sgo.MustPublicKeyFromBase58("CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C")
 
 // PoolState mirrors the Raydium CPMM PoolState struct (repr(C, packed), 629 bytes after discriminator).
 // Source: https://github.com/raydium-io/raydium-cp-swap/blob/master/programs/cp-swap/src/states/pool.rs
@@ -56,23 +60,16 @@ type PoolState struct {
 
 // AmmConfig mirrors the Raydium CPMM AmmConfig struct (repr(C, packed), 228 bytes after discriminator).
 type AmmConfig struct {
-	Bump               uint8
-	DisableCreatePool  bool
-	Index              uint16
-	TradeFeeRate       uint64
-	ProtocolFeeRate    uint64
-	FundFeeRate        uint64
-	CreatePoolFee      uint64
-	ProtocolOwner      sgo.PublicKey
-	FundOwner          sgo.PublicKey
-	CreatorFeeRate     uint64
-}
-
-// PoolStateWithToken bundles a parsed pool state with its fetched vault balances.
-type PoolStateWithToken struct {
-	Info        *PoolState
-	Token0Vault *sgotkn.Account
-	Token1Vault *sgotkn.Account
+	Bump              uint8
+	DisableCreatePool bool
+	Index             uint16
+	TradeFeeRate      uint64
+	ProtocolFeeRate   uint64
+	FundFeeRate       uint64
+	CreatePoolFee     uint64
+	ProtocolOwner     sgo.PublicKey
+	FundOwner         sgo.PublicKey
+	CreatorFeeRate    uint64
 }
 
 // Summary is the compact, JSON-serialisable view of a CPMM pool.
@@ -84,9 +81,7 @@ type Summary struct {
 }
 
 // Configuration is the result of a completed CPMM pool download.
-type Configuration struct {
-	List []*Summary `json:"list"`
-}
+type Configuration struct{}
 
 func u8(data []byte, off int) uint8 {
 	return data[off]
@@ -166,30 +161,28 @@ func ParseAmmConfig(id sgo.PublicKey, body []byte) (*AmmConfig, error) {
 func Download(
 	parentCtx context.Context,
 	stateClient state.Client,
-) (*Configuration, error) {
+	db *sql.DB,
+	maxSubscriptionCount int,
+	force bool,
+	mintTracker *mintinfo.Tracker,
+) error {
 	entry := logger.FromContext(parentCtx)
-	ctx, cancel := context.WithCancelCause(parentCtx)
-	poolMapC := make(chan map[sgo.PublicKey]*PoolStateWithToken, 1)
-	errorC := make(chan error, 1)
-	handler := createHandler(ctx, sgo.SysVarClockPubkey, cancel, poolMapC, errorC, entry)
-	_ = stateClient.Hook(handler)
-
-	select {
-	case err := <-errorC:
-		return nil, err
-	case x := <-poolMapC:
-		ans := new(Configuration)
-		ans.List = make([]*Summary, len(x))
-		i := 0
-		for pk, v := range x {
-			ans.List[i] = &Summary{
-				Pubkey:       pk,
-				Mint0:        v.Info.Token0Mint,
-				Mint1:        v.Info.Token1Mint,
-				TradeFeeRate: 0, // AmmConfig not fetched during download
-			}
-			i++
-		}
-		return ans, nil
+	n, err := poolCount(db)
+	if err != nil {
+		return fmt.Errorf("cpmm: check pool count: %w", err)
 	}
+	if n > 0 && !force {
+		entry.Info(fmt.Sprintf("cpmm: %d pools already in db, skipping fetch", n))
+		return nil
+	}
+	ctx, cancel := context.WithCancelCause(parentCtx)
+	handler := createHandler(ctx, cancel, entry, maxSubscriptionCount, db, mintTracker)
+	err = stateClient.Hook(handler)
+	cancel(err)
+	if err != nil {
+		handler.logger.Error(fmt.Sprintf("cause err %s", err))
+		return fmt.Errorf("hook failed: %s", err)
+	}
+	handler.logger.Info(fmt.Sprintf("Download cpmm - finished - 2 - bad pools %d", handler.oldPoolCount))
+	return nil
 }

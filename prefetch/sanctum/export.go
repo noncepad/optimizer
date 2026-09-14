@@ -1,0 +1,36 @@
+package sanctum
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+// ExportJSON writes every tracked Sanctum LST to path as a JSON array of
+// LstEntry values (its own existing json tags) -- the same real query
+// loadLsts already runs for in-process use, reused verbatim, so
+// catscope-rust-bot's build.rs can read this file instead of opening
+// prefetch.db directly.
+func ExportJSON(db *sql.DB, path string) error {
+	lsts, err := loadLsts(db)
+	if err != nil {
+		return fmt.Errorf("sanctum: export json: %w", err)
+	}
+	if lsts == nil {
+		lsts = []*LstEntry{}
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("sanctum: create %s: %w", path, err)
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", "    ")
+	if err := enc.Encode(lsts); err != nil {
+		return fmt.Errorf("sanctum: encode %s: %w", path, err)
+	}
+	return nil
+}

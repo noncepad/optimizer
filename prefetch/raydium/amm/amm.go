@@ -1,17 +1,26 @@
+// Package amm tracks amm
 package amm
 
 import (
 	"context"
+	"database/sql"
 	"encoding/binary"
 	"fmt"
 
 	"git.noncepad.com/pkg/bot/state"
+	"git.noncepad.com/pkg/optimizer/prefetch/mintinfo"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	sgo "github.com/gagliardetto/solana-go"
 	sgotkn "github.com/gagliardetto/solana-go/programs/token"
 )
 
-// Size is the exact byte length of a serialised AmmInfo account (repr(C, packed)).
+// Size is the exact byte length of a serialised AmmInfo account.
+// AmmInfo is repr(C, packed) and loaded on-chain via bytemuck's Pod/Zeroable
+// (see Loadable::load / load_checked in the Raydium source), which the
+// program itself gates on account.data_len() == size_of::<AmmInfo>() — so
+// 752 is the only size that is ever legitimately this account type. Since
+// AmmInfo has no discriminator, anything looser (e.g. "at least Size") would
+// also match other, unrelated account types the program happens to own.
 const Size = 752
 
 // U128 holds a little-endian 128-bit unsigned integer split into two 64-bit halves.
@@ -33,14 +42,15 @@ type Fees struct {
 }
 
 // StateData mirrors the Raydium AMM v4 StateData struct (repr(C, packed), 144 bytes).
+// All fields from OrderbookToInitTime onward (including the padding below) are
+// deprecated on-chain — no longer read or updated by the program.
 type StateData struct {
-	NeedTakePnlCoin     uint64
-	NeedTakePnlPc       uint64
-	TotalPnlPc          uint64
-	TotalPnlCoin        uint64
-	PoolOpenTime        uint64
-	PunishPcAmount      uint64
-	PunishCoinAmount    uint64
+	NeedTakePnlCoin uint64
+	NeedTakePnlPc   uint64
+	TotalPnlPc      uint64
+	TotalPnlCoin    uint64
+	PoolOpenTime    uint64
+	// padding [u64; 2] in the real struct — reserved, not two real fields.
 	OrderbookToInitTime uint64
 	SwapCoinInAmount    U128
 	SwapPcOutAmount     U128
@@ -94,11 +104,12 @@ type AmmInfo struct {
 	Market        sgo.PublicKey // OpenBook market
 	MarketProgram sgo.PublicKey // OpenBook program ID
 	TargetOrders  sgo.PublicKey
-	WithdrawQueue sgo.PublicKey
-	LpVault       sgo.PublicKey // pool_temp_lp
-	Owner         sgo.PublicKey // admin (multisig)
-	LpReserve     uint64
-	Padding       [3]uint64
+	// padding [u64; 8] in the real struct (64 bytes) — reserved, not two
+	// more pubkeys. Owner and LpReserve below land on the correct real
+	// offsets regardless, since this gap is the same size as the two
+	// pubkeys previously (incorrectly) read here.
+	Owner     sgo.PublicKey // admin (multisig)
+	LpReserve uint64        // pool's minted LP token supply
 }
 
 func u64(data []byte, off int) uint64 {
@@ -119,7 +130,7 @@ func pubkey(data []byte, off int) sgo.PublicKey {
 // Parse deserialises a raw account data slice into an AmmInfo.
 func Parse(pubkeyID sgo.PublicKey, data []byte) (*AmmInfo, error) {
 	if len(data) != Size {
-		return nil, fmt.Errorf("amm: expected %d bytes, got %d", Size, len(data))
+		return nil, fmt.Errorf("amm: expected exactly %d bytes, got %d", Size, len(data))
 	}
 	a := &AmmInfo{}
 	a.Status = u64(data, 0)
@@ -155,8 +166,7 @@ func Parse(pubkeyID sgo.PublicKey, data []byte) (*AmmInfo, error) {
 	a.StateData.TotalPnlPc = u64(data, 208)
 	a.StateData.TotalPnlCoin = u64(data, 216)
 	a.StateData.PoolOpenTime = u64(data, 224)
-	a.StateData.PunishPcAmount = u64(data, 232)
-	a.StateData.PunishCoinAmount = u64(data, 240)
+	// padding [u64; 2] at 232 (skipped)
 	a.StateData.OrderbookToInitTime = u64(data, 248)
 	a.StateData.SwapCoinInAmount = u128(data, 256)
 	a.StateData.SwapPcOutAmount = u128(data, 272)
@@ -175,13 +185,9 @@ func Parse(pubkeyID sgo.PublicKey, data []byte) (*AmmInfo, error) {
 	a.Market = pubkey(data, 528)
 	a.MarketProgram = pubkey(data, 560)
 	a.TargetOrders = pubkey(data, 592)
-	a.WithdrawQueue = pubkey(data, 624)
-	a.LpVault = pubkey(data, 656)
+	// padding [u64; 8] at 624 (skipped, 64 bytes)
 	a.Owner = pubkey(data, 688)
 	a.LpReserve = u64(data, 720)
-	a.Padding[0] = u64(data, 728)
-	a.Padding[1] = u64(data, 736)
-	a.Padding[2] = u64(data, 744)
 	_ = pubkeyID
 	return a, nil
 }
@@ -190,42 +196,32 @@ type Configuration struct {
 	List []*Summary
 }
 
+var ProgramID = sgo.MustPublicKeyFromBase58("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")
+
 func Download(
 	parentCtx context.Context,
 	stateClient state.Client,
-) (*Configuration, error) {
-	entry := logger.FromContext(parentCtx)
-	ctx, cancel := context.WithCancelCause(parentCtx)
-	poolMapC := make(chan map[sgo.PublicKey]*AmmInfoWithToken, 1)
-	errorC := make(chan error, 1)
-	handler := createHandler(ctx, sgo.SysVarClockPubkey, cancel, poolMapC, errorC, entry)
-	_ = stateClient.Hook(handler)
-
-	select {
-	case err := <-errorC:
-		return nil, err
-	case x := <-poolMapC:
-		ans := new(Configuration)
-		ans.List = make([]*Summary, len(x))
-		i := 0
-		for pubkey, v := range x {
-			var coinBalance uint64
-			if v.CoinVault != nil {
-				coinBalance = v.CoinVault.Amount
-			}
-			var pcBalance uint64
-			if v.PcVault != nil {
-				pcBalance = v.PcVault.Amount
-			}
-			ans.List[i] = &Summary{
-				Pubkey:      pubkey,
-				Coin:        v.Info.CoinVault,
-				CoinBalance: coinBalance,
-				Pc:          v.Info.PcVault,
-				PcBalance:   pcBalance,
-			}
-			i++
-		}
-		return ans, nil
+	db *sql.DB,
+	maxSubscriptionCount int,
+	force bool,
+	mintTracker *mintinfo.Tracker,
+) error {
+	entry := logger.FromContext(parentCtx).With("handler", "amm")
+	n, err := poolCount(db)
+	if err != nil {
+		return fmt.Errorf("amm: check pool count: %w", err)
 	}
+	if n > 0 && !force {
+		entry.Info(fmt.Sprintf("amm: %d pools already in db, skipping fetch", n))
+		return nil
+	}
+	ctx, cancel := context.WithCancelCause(parentCtx)
+	handler := createHandler(ctx, cancel, entry, maxSubscriptionCount, db, mintTracker)
+	err = stateClient.Hook(handler)
+	cancel(err)
+	if err != nil {
+		handler.logger.Error(fmt.Sprintf("cause err %s", err))
+		return fmt.Errorf("hook failed: %s", err)
+	}
+	return err
 }

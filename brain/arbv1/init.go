@@ -115,7 +115,7 @@ botdone:
 	if hs.handshake.Error != nil {
 		return hs.handshake.Error
 	}
-	go loopInstance(hs.ctx, hs.cancel, *hs.handshake, instance, entry, hs.state)
+	go loopInstance(hs.ctx, hs.cancel, *hs.handshake, instance, entry, hs.state, hs.db)
 	hs.instance = new(mgrbot.Bot)
 	*hs.instance = instance
 	return hs.initWallet()

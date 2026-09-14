@@ -2,15 +2,23 @@ package arbv1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/brain"
 	"git.noncepad.com/pkg/bot/txbuilder"
+	"git.noncepad.com/pkg/optimizer/bundler"
 	"git.noncepad.com/pkg/solpipe-util/common"
 	"git.noncepad.com/pkg/solpipe-util/graph"
 	sgo "github.com/gagliardetto/solana-go"
 )
+
+// ErrBotNotConnectedYet is returned by SendBundlerTipUpdate while the bot
+// hasn't finished its handshake yet -- mirrors testperpv1's own
+// sentinel of the same name. Not an error condition RunTipBroadcaster
+// treats specially; it just logs and retries on its next tick.
+var ErrBotNotConnectedYet = errors.New("arbv1: bot not connected yet")
 
 var (
 	MintUSDC = sgo.MustPublicKeyFromBase58("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
@@ -132,5 +140,18 @@ func (hs *eventHook) Evaluate(solpipeState brain.SolpipeState, bidderState brain
 			}
 
 		}*/
+	return nil
+}
+
+// SendBundlerTipUpdate pushes a live bundler tip update to the running
+// bot -- see bundler.RunTipBroadcaster, the periodic poller that calls
+// this.
+func (hs *eventHook) SendBundlerTipUpdate(update bundler.TipUpdate) error {
+	if hs.instance == nil {
+		return ErrBotNotConnectedYet
+	}
+	if err := hs.instance.CustomStdin(bundler.DoBundlerTipUpdate(update)); err != nil {
+		return fmt.Errorf("arbv1: send bundler tip update: %w", err)
+	}
 	return nil
 }

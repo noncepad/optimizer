@@ -155,7 +155,7 @@ The optimizer code actually compiles the code automatically. The code that does 
 
 The optimizer is an example of how to programmatically:
 
-1. set a budget allocation for different pipelines (in this example, no USD/hour and 1 pipeline); see `./brain/helloworldv1`
+1. set a budget allocation for different pipelines (in this example, no USD/hour and 1 pipeline); see `./brain/arbv1`
 1. connect to the single pipeline
 1. upload a bot to this pipeline (which sits in front a validator bot runtime)
 1. run the bot and see stderr output
@@ -174,7 +174,7 @@ go build -o ./optimizer ./cmd
 Run the optimizer:
 
 ```bash
-MODE=helloworldv1 REPO=$HOME/work/catscope-rust-bot ./optimizer run ./fee-payer.json --orca
+./optimizer arb ./fee-payer.json
 ```
 
 * Set `BOT_IMAGE` to the file path of the compiled web assembly bot
