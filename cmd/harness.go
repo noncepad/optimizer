@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"git.noncepad.com/pkg/optimizer/store"
+	"git.noncepad.com/pkg/bot/state"
+	"git.noncepad.com/pkg/optimizer/chainstate"
 )
 
 // HarnessCmd runs a fixed set of questions' SQL directly against
@@ -81,15 +82,14 @@ var harnessQuestions = []harnessQuestion{
 }
 
 func (r *HarnessCmd) Run(rc *RunConfig) error {
-	_ = rc
-	prefetchDB, err := store.Open(r.DBPath)
+	chainState, err := chainstate.Create(rc.Ctx, r.DBPath, state.Client{})
 	if err != nil {
 		return fmt.Errorf("failed to open prefetch db: %s", err)
 	}
 	defer func() {
-		_ = prefetchDB.Close()
+		_ = chainState.Close()
 	}()
-	db := prefetchDB.DB()
+	db := chainState.Database().DB()
 
 	fmt.Printf("## Harness question set -- known-correct answers (%s)\n\n", r.DBPath)
 	for i, q := range harnessQuestions {

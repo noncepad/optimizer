@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"git.noncepad.com/pkg/bot/state"
+	"git.noncepad.com/pkg/optimizer/chainstate"
 	"git.noncepad.com/pkg/optimizer/prefetch/pnl"
-	"git.noncepad.com/pkg/optimizer/store"
 	"git.noncepad.com/pkg/solpipe-util/common"
 	sgo "github.com/gagliardetto/solana-go"
 )
@@ -29,7 +30,6 @@ type PnlBetweenCmd struct {
 }
 
 func (r *PnlBetweenCmd) Run(rc *RunConfig) error {
-	_ = rc
 	parentKey, err := sgo.PrivateKeyFromSolanaKeygenFile(r.ParentKey)
 	if err != nil {
 		return fmt.Errorf("failed to load authorizer: %s", err)
@@ -48,15 +48,15 @@ func (r *PnlBetweenCmd) Run(rc *RunConfig) error {
 
 	wallet := common.DeriveChildKeyFromIndex(parentKey, tradingChildKeyIndex).PublicKey()
 
-	prefetchDB, err := store.Open(getDBFilePath())
+	chainState, err := chainstate.Create(rc.Ctx, getDBFilePath(), state.Client{})
 	if err != nil {
 		return fmt.Errorf("failed to open prefetch db: %s", err)
 	}
 	defer func() {
-		_ = prefetchDB.Close()
+		_ = chainState.Close()
 	}()
 
-	positions, err := pnl.PositionsBetween(prefetchDB.Raw(), wallet, start, end)
+	positions, err := pnl.PositionsBetween(chainState.Database().Raw(), wallet, start, end)
 	if err != nil {
 		return fmt.Errorf("compute PnL: %w", err)
 	}

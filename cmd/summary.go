@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"git.noncepad.com/pkg/optimizer/store"
+	"git.noncepad.com/pkg/bot/state"
+	"git.noncepad.com/pkg/optimizer/chainstate"
 )
 
 // SummaryCmd prints a human-readable overview of what download-arb has
@@ -14,20 +15,19 @@ import (
 type SummaryCmd struct{}
 
 func (r *SummaryCmd) Run(rc *RunConfig) error {
-	_ = rc
 	dbPath := getDBFilePath()
 	info, err := os.Stat(dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to stat %s: %s", dbPath, err)
 	}
-	prefetchDB, err := store.Open(dbPath)
+	chainState, err := chainstate.Create(rc.Ctx, dbPath, state.Client{})
 	if err != nil {
 		return fmt.Errorf("failed to open prefetch db: %s", err)
 	}
 	defer func() {
-		_ = prefetchDB.Close()
+		_ = chainState.Close()
 	}()
-	db := prefetchDB.DB()
+	db := chainState.Database().DB()
 
 	fmt.Printf(
 		"## `%s` summary (last written %s, %d MB)\n\n",

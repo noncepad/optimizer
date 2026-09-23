@@ -13,8 +13,9 @@ import (
 	"strconv"
 	"time"
 
+	"git.noncepad.com/pkg/bot/state"
+	"git.noncepad.com/pkg/optimizer/chainstate"
 	"git.noncepad.com/pkg/optimizer/portfolio"
-	"git.noncepad.com/pkg/optimizer/store"
 )
 
 // explorerTableURL links a dashboard row through to the prefetch.db table
@@ -51,7 +52,6 @@ type DashboardCmd struct {
 }
 
 func (r *DashboardCmd) Run(rc *RunConfig) error {
-	_ = rc
 	if _, err := os.Stat(r.DBPath); err != nil {
 		return fmt.Errorf("failed to stat %s: %s", r.DBPath, err)
 	}
@@ -63,14 +63,14 @@ func (r *DashboardCmd) Run(rc *RunConfig) error {
 	// the parent directory to exist.
 	_ = os.MkdirAll(filepath.Dir(r.PortfolioPath), 0o750)
 
-	prefetchDB, err := store.Open(r.DBPath)
+	chainState, err := chainstate.Create(rc.Ctx, r.DBPath, state.Client{})
 	if err != nil {
 		return fmt.Errorf("failed to open prefetch db: %s", err)
 	}
 	defer func() {
-		_ = prefetchDB.Close()
+		_ = chainState.Close()
 	}()
-	db := prefetchDB.DB()
+	db := chainState.Database().DB()
 
 	// One long-lived connection to portfolio.db, shared by the PnL card and
 	// the portfolio table explorer -- see the SQLITE_BUSY note on
