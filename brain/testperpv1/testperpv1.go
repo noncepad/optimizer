@@ -1,17 +1,17 @@
 // Package testperpv1 is the Go-side orchestrator for the testperpv1 bot
 // mode -- a real-transaction smoke test, not a real trading strategy.
-// Same allocation/upload/handshake/wallet-init flow every bot mode's
-// orchestrator follows (see arbv1's own package for the analogous
-// structure), only MODE=testperpv1 selected at upload time instead.
+// Otherwise a direct copy of package perpfundingv1's orchestration: same
+// allocation/upload/handshake/wallet-init flow, only MODE=testperpv1
+// selected at upload time instead.
 //
 // It implements the brain.Brain interface and is responsible for:
 //   - Allocating a slot on a Catscope/Solpipe validator pipeline (bid = 0, free tier).
 //   - Uploading a WASM bot image to the validator with MODE=testperpv1.
 //   - Completing the handshake with the running bot instance.
-//   - Sending a child keypair to the bot via stdin, so this mode's Rust
-//     side (catscope-rust-bot/src/brain/testperpv1) can sign the real
-//     Solend/Kamino deposit/withdraw transactions its evaluate() state
-//     machine builds.
+//   - Sending a child keypair to the bot via stdin -- unlike perpfundingv1,
+//     this mode's Rust side (catscope-rust-bot/src/brain/testperpv1) does
+//     use it, to sign the real Solend/Kamino deposit/withdraw
+//     transactions its evaluate() state machine builds.
 //
 // The WASM bot (catscope-rust-bot/src/brain/testperpv1) runs the real
 // bootstrap -> deposit -> withdraw sequence for Solend then Kamino --
@@ -71,7 +71,7 @@ type Configuration struct {
 // returned instead of a bare brain.Brain so cmd/*.go can call them on the
 // same instance it hands to mothership.Create (a Hook value is itself a
 // valid brain.Brain, since this interface embeds it). Mirrors
-// arbv1.Hook's own reasoning for its trigger-sender methods.
+// leveragedloopv1.Hook's own reasoning for its trigger-sender methods.
 type Hook interface {
 	brain.Brain
 	SendBundlerTipUpdate(update bundler.TipUpdate) error

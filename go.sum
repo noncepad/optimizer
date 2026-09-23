@@ -1,5 +1,5 @@
-git.noncepad.com/pkg/bot v0.5.204 h1:1rTXG4NthDqvB37Khhmbuat+jp3wnuJm3UlV+C2vC48=
-git.noncepad.com/pkg/bot v0.5.204/go.mod h1:6vDqNCDxjz7GnD63yJPCtv7zuPHWC0LdnJcP/tXPEIw=
+git.noncepad.com/pkg/bot v0.5.215 h1:kdRVdXNvWR/ltTkTkoeb9QUBIqHWq3w9HpncxN5Vyyc=
+git.noncepad.com/pkg/bot v0.5.215/go.mod h1:LclRU1LdqBoCetosoYLAS3IetsBZGUINisFITDjq5W0=
 git.noncepad.com/pkg/safejar v0.4.15 h1:EqUHRWnox9EnxvxSDkan4EOtx/1LA/qanOtY+fZ050I=
 git.noncepad.com/pkg/safejar v0.4.15/go.mod h1:Kh0SN2O2uD7xrXpyXcWWlcFrn6vd5v9UeOn1mAJ9F34=
 git.noncepad.com/pkg/solpipe v0.4.13 h1:kjnhZjHS8E+IsR9m9nJgRu+kTSbclRPagKjz53IT7P0=
@@ -29,8 +29,6 @@ github.com/benbjohnson/clock v1.3.5/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZx
 github.com/bitly/go-simplejson v0.5.0/go.mod h1:cXHtHw4XUPsvGaxgjIAn8PhEWG9NfngEKAMDJEczWVA=
 github.com/blendle/zapdriver v1.3.1 h1:C3dydBOWYRiOk+B8X9IVZ5IOe+7cl+tGOexN4QqHfpE=
 github.com/blendle/zapdriver v1.3.1/go.mod h1:mdXfREi6u5MArG4j9fewC+FGnXaBR+T4Ox4J2u4eHCc=
-github.com/bmatcuk/doublestar/v4 v4.10.0 h1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=
-github.com/bmatcuk/doublestar/v4 v4.10.0/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
 github.com/buger/jsonparser v1.1.2 h1:frqHqw7otoVbk5M8LlE/L7HTnIq2v9RX6EJ48i9AxJk=
 github.com/buger/jsonparser v1.1.2/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=

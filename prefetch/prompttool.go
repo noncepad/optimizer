@@ -276,8 +276,8 @@ func deref(v *float64) float64 {
 type walletBalanceInput struct{}
 
 // tradingChildKeyIndex is the derivation index every bot mode in this
-// repo uses for its actual trading key (see arbv1/testperpv1's
-// eval.go -- both call
+// repo uses for its actual trading key (see arbv1/testperpv1/
+// helloworldv1/perpfundingv1's eval.go -- all four call
 // common.DeriveChildKeyFromIndex(hs.parentKey, 1) identically). The
 // fee-payer/parent key only pays gas and authenticates with the bidder
 // daemon; this derived child is what the WASM bot actually signs trades

@@ -4,7 +4,7 @@ package bundler
 // bundler's live tip state down to whichever bot mode is currently running,
 // over the same catmsg.FixedPair/CustomStdin pipe every brain package's own
 // per-strategy messages already use (see e.g.
-// optimizer/brain/testperpv1/message.go's DoTargetAllocation) -- defined
+// optimizer/brain/perpfundingv1/message.go's DoTargetAllocation) -- defined
 // once here, not duplicated per brain package, since the wire shape and the
 // broadcaster loop below are identical regardless of which strategy
 // receives it. Mirrors KeyFlagCommonAccountUsage's reserved-namespace

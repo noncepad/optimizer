@@ -1,8 +1,10 @@
 // Package lstyield estimates real Solana liquid-staking-token (LST)
 // staking yield from a periodic SOL-per-LST exchange-rate timeseries, so
-// an LST-collateral leverage-loop strategy (originally built as
-// leveragedloopv1's Time-Expanded DAG, since removed) has a real
-// profitability signal to work from. The WASM bot itself can't do this: it has no
+// perpfundingv1's leveraged-yield-farming plan (see
+// catscope-rust-bot/src/brain/leveraged_yield_farming_plan.md, "Phase 0")
+// and leveragedloopv1's Time-Expanded DAG (see
+// catscope-rust-bot/src/trader/TIME.md) have a real profitability signal
+// for LST-collateral loops. The WASM bot itself can't do this: it has no
 // persistent storage across restarts and no way to compute a
 // rate-of-change on its own. optimizer already reads real on-chain state
 // independently and already has prefetch.db, so this is a Go-side-only
@@ -37,10 +39,12 @@ type KnownLST struct {
 }
 
 // KnownLSTs is testperpv1's curated, named set -- the three named in the
-// leveraged-yield-farming plan. testperpv1's own LstApy wire message is
+// leveraged-yield-farming plan. testperpv1's own LstApy wire message
+// (a different Go package's DoLstApy, separate from leveragedloopv1's) is
 // symbol-keyed, so it needs real, confident names, not the full mint-keyed
 // TrackedLSTs universe below. Kept deliberately narrow and unchanged by
-// the TrackedLSTs expansion -- see testperpv1/instance.go (still uses this).
+// the TrackedLSTs expansion -- see leveragedloopv1/instance.go (uses
+// TrackedLSTs instead) vs. testperpv1/instance.go (still uses this).
 var KnownLSTs = []KnownLST{
 	{
 		Symbol: "jitoSOL",
@@ -80,8 +84,8 @@ func (t TrackedLST) Label() string {
 	return s + "…"
 }
 
-// TrackedLSTs is the real candidate universe an LST-collateral
-// leverage-loop strategy would evaluate: every Sanctum-tracked LST (sanctum_lst
+// TrackedLSTs is the real candidate universe leveragedloopv1's
+// Time-Expanded DAG evaluates: every Sanctum-tracked LST (sanctum_lst
 // table) that also has a real lending-protocol reserve on Kamino,
 // Solend, or marginfi's main markets -- 37 of Sanctum's 128 tracked LSTs,
 // found by cross-referencing the live prefetch.db (2026-08-29). Unlike
@@ -192,11 +196,10 @@ func EstimateAPY(db *sql.DB, mint sgo.PublicKey, window time.Duration) (*float64
 // result would be meaningless, not just imprecise.
 //
 // **Temporarily lowered 6h -> 1h (2026-08-29, explicit user request)**
-// to get an LST-collateral leverage-loop strategy's newly-expanded
-// 37-candidate DAG (leveragedloopv1's Time-Expanded DAG, since removed) a
-// real (but noisier -- a single ~1h sample of exchange-rate movement, not a
-// smooth multi-hour trend) signal well before a real trigger-open trade
-// would otherwise wait ~6h for one. This is a real, deliberate signal-quality
+// to get leveragedloopv1's newly-expanded 37-candidate DAG a real (but
+// noisier -- a single ~1h sample of exchange-rate movement, not a smooth
+// multi-hour trend) signal well before a real `TriggerOpenAuto` would
+// otherwise wait ~6h for one. This is a real, deliberate signal-quality
 // tradeoff on the exact number that decides whether real money opens a
 // position -- revert to 6h (or higher) once enough real snapshot history
 // has accumulated that the shorter window isn't the only data available.

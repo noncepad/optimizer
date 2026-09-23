@@ -1,0 +1,765 @@
+<title>Host &amp; Guest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #F2F0E6;
+    --surface: #FBFAF4;
+    --surface-2: #FFFFFF;
+    --ink: #21251E;
+    --ink-muted: #63684F;
+    --line: #C9C6B2;
+    --teal: #2B5D53;
+    --teal-tint: #E4ECE7;
+    --copper: #9A4E2B;
+    --copper-tint: #F3E6DA;
+    --amber: #96700F;
+    --brick: #A5352A;
+    --brick-tint: #F5DEDA;
+    --dot: #D8D5C4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1B1D17;
+      --surface: #23261F;
+      --surface-2: #292C24;
+      --ink: #ECE9DC;
+      --ink-muted: #A6A88F;
+      --line: #454A3A;
+      --teal: #7FC4B0;
+      --teal-tint: #24322C;
+      --copper: #E3985F;
+      --copper-tint: #382920;
+      --amber: #E1B85B;
+      --brick: #E58979;
+      --brick-tint: #3B2420;
+      --dot: #33362C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1B1D17;
+    --surface: #23261F;
+    --surface-2: #292C24;
+    --ink: #ECE9DC;
+    --ink-muted: #A6A88F;
+    --line: #454A3A;
+    --teal: #7FC4B0;
+    --teal-tint: #24322C;
+    --copper: #E3985F;
+    --copper-tint: #382920;
+    --amber: #E1B85B;
+    --brick: #E58979;
+    --brick-tint: #3B2420;
+    --dot: #33362C;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(var(--dot) 1px, transparent 1px) 0 0 / 22px 22px,
+      var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    padding: 40px 24px 70px;
+  }
+  .wrap { max-width: 1400px; margin: 0 auto; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: clamp(32px, 4.4vw, 52px);
+    letter-spacing: -0.01em;
+    margin: 0 0 10px;
+    text-wrap: balance;
+  }
+  .dek {
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink-muted);
+    max-width: 66ch;
+    margin: 0 0 34px;
+  }
+  .dek code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.92em;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.05em 0.4em;
+  }
+
+  figure {
+    margin: 0 0 36px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .diagram-scroll { overflow-x: auto; }
+  svg { display: block; width: 100%; height: auto; min-width: 980px; }
+  figcaption {
+    font-size: 13px;
+    color: var(--ink-muted);
+    padding: 12px 10px 4px;
+    line-height: 1.5;
+  }
+
+  /* ---- SVG type styles (via CSS so both themes stay in sync) ---- */
+  .lbl-title { font-family: "IBM Plex Mono", monospace; font-weight: 700; }
+  .lbl-mono  { font-family: "IBM Plex Mono", monospace; }
+  .lbl-sans  { font-family: "IBM Plex Sans", sans-serif; }
+
+  /* ---- Future-arb strip ---- */
+  .future {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin-top: 8px;
+  }
+  .future h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 0 0 14px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--teal);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .card.gap { border-left-color: var(--brick); }
+  .card h3 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 14.5px;
+    margin: 0 0 8px;
+  }
+  .card p {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+  .card code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.94em;
+    color: var(--ink);
+  }
+
+  /* ---- Key-steps detail section ---- */
+  .details { margin-top: 54px; }
+  .details > h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 0 0 6px;
+  }
+  .details > .sub {
+    font-size: 13.5px;
+    color: var(--ink-muted);
+    margin: 0 0 22px;
+    max-width: 70ch;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .detail-grid { grid-template-columns: 1fr; }
+  }
+  .col-title {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 12px;
+    margin: 0 0 18px;
+  }
+  .step-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .step-card h4 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 14.5px;
+    margin: 0 0 3px;
+    color: var(--ink);
+  }
+  .step-card .role {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin: 0 0 14px;
+  }
+  .steps {
+    list-style: none;
+    counter-reset: step;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .steps li {
+    position: relative;
+    padding-left: 30px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0.5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--accent-tint);
+    border: 1px solid var(--accent);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+  }
+  .steps code, .step-card .role code, .caveat code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.92em;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.02em 0.35em;
+  }
+  .caveat {
+    margin-top: 12px;
+    padding: 9px 11px;
+    background: var(--brick-tint);
+    border: 1px solid var(--brick);
+    border-radius: 6px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .caveat b {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--brick);
+    letter-spacing: 0.04em;
+    margin-right: 4px;
+  }
+  .engine-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .engine-item {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 11px 12px;
+  }
+  .engine-item h5 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    margin: 0 0 8px;
+    color: var(--ink);
+  }
+  .steps.compact li {
+    font-size: 11.5px;
+    padding-left: 24px;
+  }
+  .steps.compact li::before {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+    top: 1px;
+  }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Systems map · pass 1 — architecture, verified against source</p>
+  <h1>Host &amp; Guest</h1>
+  <p class="dek">
+    <code>optimizer</code> (Go, the host) and <code>catscope-rust-bot</code> (Rust→WASM, the guest)
+    are two repos held together by a hand-mirrored stdin/stdout protocol and a shared naming
+    convention. Box-level map — names, files, and what talks to what.
+  </p>
+
+  <figure>
+    <div class="diagram-scroll">
+<svg viewBox="0 0 1620 1000" role="img" aria-label="Architecture diagram: a Solana validator feeds the catscope-rust-bot WASM guest and the optimizer Go host independently; the guest and host are connected by a hand-mirrored stdin/stdout wire protocol; a dashed red line marks that the guest's funding-rate data never reaches the host's allocation logic, which is unimplemented; external shared Go modules sit to the right.">
+  <defs>
+    <marker id="arrow-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--amber)"/>
+    </marker>
+    <marker id="arrow-brick" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--brick)"/>
+    </marker>
+  </defs>
+
+  <!-- ============ VALIDATOR (environment) ============ -->
+  <rect x="580" y="20" width="400" height="95" rx="8" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="780" y="50" text-anchor="middle" class="lbl-title" font-size="16" fill="var(--ink)">Solana validator</text>
+  <text x="780" y="72" text-anchor="middle" class="lbl-sans" font-size="12" fill="var(--ink-muted)">Catscope Geyser plugin · Solpipe pipeline (gRPC)</text>
+  <text x="780" y="90" text-anchor="middle" class="lbl-mono" font-size="10.5" fill="var(--ink-muted)">environment both repos plug into — not part of either repo</text>
+
+  <!-- arrows validator -> B / D -->
+  <polyline points="620,115 620,127 350,127 350,140" fill="none" stroke="var(--ink)" stroke-width="1.5" marker-end="url(#arrow-ink)"/>
+  <text x="360" y="122" class="lbl-mono" font-size="10.5" fill="var(--ink-muted)">account / tx / slot events (WIT)</text>
+  <polyline points="940,115 940,127 1100,127 1100,140" fill="none" stroke="var(--ink)" stroke-width="1.5" marker-end="url(#arrow-ink)"/>
+  <text x="1000" y="122" class="lbl-mono" font-size="10.5" fill="var(--ink-muted)">independent gRPC pull</text>
+
+  <!-- return arrow: signed tx, B -> validator -->
+  <polyline points="210,801 140,801 140,65 580,65" fill="none" stroke="var(--ink)" stroke-width="1.5" marker-end="url(#arrow-ink)"/>
+  <text x="150" y="440" class="lbl-mono" font-size="10.5" fill="var(--ink-muted)" transform="rotate(-90 150 440)">signed tx →</text>
+
+  <!-- ============ B: catscope-rust-bot ============ -->
+  <rect x="170" y="140" width="560" height="770" rx="10" fill="var(--surface)" stroke="var(--copper)" stroke-width="2"/>
+  <rect x="170" y="140" width="560" height="46" rx="10" fill="var(--copper-tint)"/>
+  <rect x="170" y="163" width="560" height="23" fill="var(--copper-tint)"/>
+  <text x="450" y="168" text-anchor="middle" class="lbl-title" font-size="17" fill="var(--copper)">catscope-rust-bot</text>
+  <rect x="210" y="182" width="480" height="24" rx="4" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="450" y="198" text-anchor="middle" class="lbl-mono" font-size="10.5" fill="var(--ink-muted)">WASM guest — runs ON the validator, one instance per bot mode</text>
+
+  <!-- row1: event_loop.rs -->
+  <rect x="210" y="222" width="480" height="42" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="224" y="240" class="lbl-mono" font-size="13" font-weight="700" fill="var(--ink)">event_loop.rs</text>
+  <text x="224" y="256" class="lbl-sans" font-size="11" fill="var(--ink-muted)">WIT poll loop — on_load / on_event / flush</text>
+
+  <text x="210" y="284" class="lbl-mono" font-size="11" letter-spacing="0.06em" fill="var(--ink-muted)">BRAIN/*V1 — VERSIONED STRATEGY MODULES</text>
+  <!-- row2 pills -->
+  <g>
+    <rect x="210" y="296" width="480" height="36" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="224" y="311" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">arbv1</text>
+    <text x="224" y="325" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">cross-DEX price arbitrage — the real price-arb strategy</text>
+  </g>
+  <g>
+    <rect x="210" y="340" width="480" height="36" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="224" y="355" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">perpfundingv1</text>
+    <text x="224" y="369" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">funding-rate arbitrage — the real funding strategy</text>
+  </g>
+  <g>
+    <rect x="210" y="384" width="480" height="36" rx="6" fill="var(--brick-tint)" stroke="var(--brick)"/>
+    <text x="224" y="399" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">testperpv1</text>
+    <text x="224" y="413" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">NOT arb — real-tx smoke test (see note below)</text>
+  </g>
+  <g>
+    <rect x="210" y="428" width="480" height="36" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="224" y="443" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">helloworldv1</text>
+    <text x="224" y="457" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">reference bot — print slots, swap USDC/SOL on Orca</text>
+  </g>
+  <g>
+    <rect x="210" y="472" width="480" height="36" rx="6" fill="none" stroke="var(--line)" stroke-dasharray="4 3"/>
+    <text x="224" y="487" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink-muted)">phoenixperpsv1</text>
+    <text x="224" y="501" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">exists here only — no Go orchestrator yet</text>
+  </g>
+
+  <text x="210" y="528" class="lbl-mono" font-size="11" letter-spacing="0.06em" fill="var(--ink-muted)">TRADER/ — THE QUANT ENGINE</text>
+  <g>
+    <rect x="210" y="540" width="480" height="34" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="224" y="554" class="lbl-mono" font-size="12" font-weight="700" fill="var(--ink)">pricegraph.rs</text>
+    <text x="224" y="567" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">PriceGraph + TradeRouter — Bellman-Ford DAG</text>
+  </g>
+  <g>
+    <rect x="210" y="584" width="480" height="34" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="224" y="598" class="lbl-mono" font-size="12" font-weight="700" fill="var(--ink)">spfa.rs</text>
+    <text x="224" y="611" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">negative-cycle detection, SIMD-tuned</text>
+  </g>
+  <g>
+    <rect x="210" y="628" width="480" height="34" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="224" y="642" class="lbl-mono" font-size="12" font-weight="700" fill="var(--ink)">planner.rs</text>
+    <text x="224" y="655" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">dry-run cycle find → real-size re-check</text>
+  </g>
+  <g>
+    <rect x="210" y="672" width="480" height="34" rx="6" fill="var(--surface-2)" stroke="var(--brick)" stroke-width="1.5"/>
+    <text x="224" y="686" class="lbl-mono" font-size="12" font-weight="700" fill="var(--ink)">perp_router.rs</text>
+    <text x="224" y="699" class="lbl-sans" font-size="10.5" fill="var(--brick)">funding-rate feed — see the gap, right →</text>
+  </g>
+  <g>
+    <rect x="210" y="716" width="480" height="44" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="224" y="730" class="lbl-mono" font-size="12" font-weight="700" fill="var(--ink)">dex/*</text>
+    <text x="224" y="743" class="lbl-sans" font-size="10" fill="var(--ink-muted)">orca · drift · kamino · marginfi · solend · jet</text>
+    <text x="224" y="755" class="lbl-sans" font-size="10" fill="var(--ink-muted)">pumpfun · pumpswap · sanctum · marinade · pyth · spl_stake_pool</text>
+  </g>
+
+  <!-- row4: wallet/tx -->
+  <rect x="210" y="774" width="480" height="42" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="224" y="792" class="lbl-mono" font-size="13" font-weight="700" fill="var(--ink)">wallet.rs · tx.rs</text>
+  <text x="224" y="808" class="lbl-sans" font-size="11" fill="var(--ink-muted)">signs with the child keypair, sends to the validator</text>
+
+  <!-- note callout -->
+  <rect x="210" y="832" width="480" height="62" rx="6" fill="var(--brick-tint)" stroke="var(--brick)"/>
+  <text x="224" y="850" class="lbl-mono" font-size="10.5" font-weight="700" fill="var(--brick)">CORRECTION</text>
+  <text x="224" y="866" class="lbl-sans" font-size="10.8" fill="var(--ink)">testperpv1 is a byte-for-byte copy of perpfundingv1 with</text>
+  <text x="224" y="880" class="lbl-sans" font-size="10.8" fill="var(--ink)">evaluate() swapped for a real Solend→Kamino deposit/withdraw</text>
+  <text x="224" y="894" class="lbl-sans" font-size="10.8" fill="var(--ink)">smoke test. It proves the tx pipeline works — it isn't a strategy.</text>
+
+  <!-- ============ D: optimizer ============ -->
+  <rect x="830" y="140" width="560" height="770" rx="10" fill="var(--surface)" stroke="var(--teal)" stroke-width="2"/>
+  <rect x="830" y="140" width="560" height="46" rx="10" fill="var(--teal-tint)"/>
+  <rect x="830" y="163" width="560" height="23" fill="var(--teal-tint)"/>
+  <text x="1110" y="168" text-anchor="middle" class="lbl-title" font-size="17" fill="var(--teal)">optimizer</text>
+  <rect x="870" y="182" width="480" height="24" rx="4" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="1110" y="198" text-anchor="middle" class="lbl-mono" font-size="10.5" fill="var(--ink-muted)">Go host — runs off-validator, one process per bot mode</text>
+
+  <!-- row1: prefetch -->
+  <rect x="870" y="222" width="480" height="42" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="884" y="240" class="lbl-mono" font-size="13" font-weight="700" fill="var(--ink)">prefetch/* → prefetch.db</text>
+  <text x="884" y="256" class="lbl-sans" font-size="11" fill="var(--ink-muted)">SQLite cache of 13 DEX/lending protocols, pulled over gRPC</text>
+
+  <text x="870" y="284" class="lbl-mono" font-size="11" letter-spacing="0.06em" fill="var(--ink-muted)">BRAIN/*V1 — GO ORCHESTRATORS</text>
+  <g>
+    <rect x="870" y="296" width="480" height="36" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="884" y="311" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">arbv1</text>
+    <text x="884" y="325" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">allocate slot → upload WASM → handshake → send wallet key</text>
+  </g>
+  <g>
+    <rect x="870" y="340" width="480" height="36" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="884" y="355" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">perpfundingv1</text>
+    <text x="884" y="369" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">same pipeline — Evaluate() is observation-only today</text>
+  </g>
+  <g>
+    <rect x="870" y="384" width="480" height="36" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="884" y="399" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">testperpv1</text>
+    <text x="884" y="413" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">same pipeline — also sends the real wallet key</text>
+  </g>
+  <g>
+    <rect x="870" y="428" width="480" height="36" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="884" y="443" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">helloworldv1</text>
+    <text x="884" y="457" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">reference orchestrator</text>
+  </g>
+  <g>
+    <rect x="870" y="472" width="480" height="36" rx="6" fill="none" stroke="var(--line)" stroke-dasharray="4 3"/>
+    <text x="884" y="490" class="lbl-mono" font-size="11.5" fill="var(--ink-muted)">+ next brain/&lt;name&gt;v1 — future arb plugs in here</text>
+  </g>
+
+  <text x="870" y="528" class="lbl-mono" font-size="11" letter-spacing="0.06em" fill="var(--brick)">THE DECISION GAP</text>
+  <g>
+    <rect x="870" y="540" width="480" height="46" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="884" y="558" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">Evaluate()</text>
+    <rect x="1180" y="546" width="160" height="18" rx="3" fill="var(--brick-tint)" stroke="var(--brick)"/>
+    <text x="1260" y="559" text-anchor="middle" class="lbl-mono" font-size="10" font-weight="700" fill="var(--brick)">CURRENTLY NO-OP</text>
+    <text x="884" y="574" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">fires on every solpipe/bidder state update</text>
+  </g>
+  <g>
+    <rect x="870" y="594" width="480" height="46" rx="6" fill="var(--brick-tint)" stroke="var(--brick)" stroke-width="1.5"/>
+    <text x="884" y="612" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">computeTargetAllocation()</text>
+    <rect x="1230" y="600" width="110" height="18" rx="3" fill="var(--surface-2)" stroke="var(--brick)"/>
+    <text x="1285" y="613" text-anchor="middle" class="lbl-mono" font-size="10" font-weight="700" fill="var(--brick)">UNIMPLEMENTED</text>
+    <text x="884" y="628" class="lbl-sans" font-size="10.5" fill="var(--ink)">should decide target % per coin — nothing feeds it yet</text>
+  </g>
+
+  <!-- row4: portfolio -->
+  <rect x="870" y="656" width="480" height="40" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="884" y="673" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">portfolio/</text>
+  <text x="884" y="688" class="lbl-sans" font-size="10.5" fill="var(--ink-muted)">PnL &amp; positions — shared by cmd/ and shell/ below</text>
+
+  <!-- row5: cmd + shell -->
+  <rect x="870" y="712" width="230" height="56" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="884" y="730" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">cmd/*</text>
+  <text x="884" y="744" class="lbl-sans" font-size="9.8" fill="var(--ink-muted)">dashboard · pnl · arb · explore</text>
+  <text x="884" y="757" class="lbl-sans" font-size="9.8" fill="var(--ink-muted)">testperp · harness (SQL answer-key)</text>
+
+  <rect x="1120" y="712" width="230" height="56" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="1134" y="730" class="lbl-mono" font-size="12.5" font-weight="700" fill="var(--ink)">shell/*</text>
+  <text x="1134" y="744" class="lbl-sans" font-size="9.8" fill="var(--ink-muted)">telnet + local Ollama react-agent</text>
+  <text x="1134" y="757" class="lbl-sans" font-size="9.8" fill="var(--ink-muted)">— the actual LLM harness</text>
+
+  <!-- note callout -->
+  <rect x="870" y="832" width="480" height="62" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+  <text x="884" y="850" class="lbl-mono" font-size="10.5" font-weight="700" fill="var(--ink-muted)">CORRECTION</text>
+  <text x="884" y="866" class="lbl-sans" font-size="10.8" fill="var(--ink)">manager/ isn't missing from this repo — it moved. It's now an</text>
+  <text x="884" y="880" class="lbl-sans" font-size="10.8" fill="var(--ink)">external module (far right →), imported as a dependency, not</text>
+  <text x="884" y="894" class="lbl-sans" font-size="10.8" fill="var(--ink)">deleted functionality.</text>
+
+  <!-- ============ wire protocol connectors ============ -->
+  <polyline points="830,360 730,360" fill="none" stroke="var(--amber)" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <text x="780" y="352" text-anchor="middle" class="lbl-mono" font-size="10" fill="var(--amber)">stdin ← wallet key · alloc % · ALT</text>
+  <polyline points="730,410 830,410" fill="none" stroke="var(--amber)" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <text x="780" y="428" text-anchor="middle" class="lbl-mono" font-size="10" fill="var(--amber)">stdout → echo · latency report</text>
+  <text x="780" y="300" text-anchor="middle" class="lbl-mono" font-size="9.5" fill="var(--ink-muted)">catmsg.FixedPair</text>
+  <text x="780" y="313" text-anchor="middle" class="lbl-mono" font-size="9.5" fill="var(--ink-muted)">message.go ⟷ message.rs</text>
+  <text x="780" y="326" text-anchor="middle" class="lbl-mono" font-size="9.5" fill="var(--ink-muted)">(hand-mirrored, no schema)</text>
+
+  <!-- gap connector: perp_router.rs -> computeTargetAllocation() -->
+  <line x1="690" y1="694" x2="870" y2="617" stroke="var(--brick)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrow-brick)"/>
+  <rect x="722" y="638" width="118" height="20" rx="3" fill="var(--brick-tint)" stroke="var(--brick)"/>
+  <text x="781" y="652" text-anchor="middle" class="lbl-mono" font-size="10" font-weight="700" fill="var(--brick)">never sent</text>
+
+  <!-- ============ E: external shared modules ============ -->
+  <rect x="1420" y="222" width="180" height="470" rx="10" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="1510" y="248" text-anchor="middle" class="lbl-title" font-size="13.5" fill="var(--ink)">external modules</text>
+  <text x="1510" y="264" text-anchor="middle" class="lbl-mono" font-size="9.5" fill="var(--ink-muted)">separate repos, imported as deps</text>
+
+  <g>
+    <rect x="1436" y="280" width="148" height="80" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="1444" y="296" class="lbl-mono" font-size="10" font-weight="700" fill="var(--ink)">manager/{bot,</text>
+    <text x="1444" y="308" class="lbl-mono" font-size="10" font-weight="700" fill="var(--ink)">bidder,brain,common}</text>
+    <text x="1444" y="324" class="lbl-sans" font-size="9.5" fill="var(--ink-muted)">bot upload, bidder daemon</text>
+    <text x="1444" y="336" class="lbl-sans" font-size="9.5" fill="var(--ink-muted)">— used to live in-tree</text>
+    <text x="1444" y="348" class="lbl-sans" font-size="9.5" fill="var(--ink-muted)">as this repo's manager/</text>
+  </g>
+  <g>
+    <rect x="1436" y="370" width="148" height="60" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="1444" y="386" class="lbl-mono" font-size="10" font-weight="700" fill="var(--ink)">catscope (mgrbot)</text>
+    <text x="1444" y="401" class="lbl-sans" font-size="9.5" fill="var(--ink-muted)">WASM image load +</text>
+    <text x="1444" y="413" class="lbl-sans" font-size="9.5" fill="var(--ink-muted)">upload to validator</text>
+  </g>
+  <g>
+    <rect x="1436" y="440" width="148" height="50" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="1444" y="456" class="lbl-mono" font-size="10" font-weight="700" fill="var(--ink)">txbuilder</text>
+    <text x="1444" y="471" class="lbl-sans" font-size="9.5" fill="var(--ink-muted)">tx batching / signing</text>
+  </g>
+  <g>
+    <rect x="1436" y="500" width="148" height="80" rx="6" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="1444" y="516" class="lbl-mono" font-size="10" font-weight="700" fill="var(--ink)">solpipe-util/</text>
+    <text x="1444" y="528" class="lbl-mono" font-size="10" font-weight="700" fill="var(--ink)">{graph,common,logger}</text>
+    <text x="1444" y="544" class="lbl-sans" font-size="9.5" fill="var(--ink-muted)">Go-side account graph,</text>
+    <text x="1444" y="556" class="lbl-sans" font-size="9.5" fill="var(--ink-muted)">key derivation, logging</text>
+  </g>
+
+  <polyline points="1350,863 1400,863 1400,457 1420,457" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrow-ink)"/>
+
+  <!-- ============ legend ============ -->
+  <g class="lbl-mono" font-size="11">
+    <rect x="210" y="932" width="16" height="16" rx="3" fill="none" stroke="var(--copper)" stroke-width="2"/>
+    <text x="234" y="944" fill="var(--ink-muted)">catscope-rust-bot (WASM guest)</text>
+
+    <rect x="470" y="932" width="16" height="16" rx="3" fill="none" stroke="var(--teal)" stroke-width="2"/>
+    <text x="494" y="944" fill="var(--ink-muted)">optimizer (Go host)</text>
+
+    <line x1="700" y1="940" x2="726" y2="940" stroke="var(--amber)" stroke-width="2"/>
+    <text x="734" y="944" fill="var(--ink-muted)">wire protocol (stdin/stdout)</text>
+
+    <line x1="960" y1="940" x2="986" y2="940" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="994" y="944" fill="var(--ink-muted)">external module boundary</text>
+
+    <line x1="1220" y1="940" x2="1246" y2="940" stroke="var(--brick)" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="1254" y="944" fill="var(--ink-muted)">path that should exist, doesn't yet</text>
+  </g>
+</svg>
+    </div>
+    <figcaption>
+      Verified against source on branch <code>t-10-harness</code>, Aug 2026. Copper = the Rust WASM
+      guest; teal = the Go host; amber = the byte-level wire protocol between them; dashed brick-red =
+      the funding-rate signal that <code>perp_router.rs</code> computes but <code>computeTargetAllocation()</code>
+      never receives.
+    </figcaption>
+  </figure>
+
+  <section class="future">
+    <h2>Future arb — outline only, nothing below is built</h2>
+    <div class="card">
+      <h3>More perp venues</h3>
+      <p>Beyond Drift/Phoenix funding: same pattern as <code>arbv1</code>/<code>perpfundingv1</code> —
+      a new <code>brain/&lt;name&gt;v1</code> pair (Go orchestrator + Rust module), extending
+      <code>perp_router.rs</code> rather than replacing it.</p>
+    </div>
+    <div class="card">
+      <h3>Yield farming (lending/staking)</h3>
+      <p><code>testperpv1</code> already proved the deposit/withdraw path against Solend and Kamino.
+      A real yield strategy would reuse that plumbing in its own module — not live inside
+      <code>testperpv1</code>, which stays a smoke test.</p>
+    </div>
+    <div class="card gap">
+      <h3>Allocation logic</h3>
+      <p>The one real blocker, above: <code>computeTargetAllocation()</code> on the Go side, fed by
+      the funding data <code>PerpRouter</code> already computes on the Rust side once that link is
+      built. Everything else in this column is downstream of closing that gap.</p>
+    </div>
+  </section>
+
+  <section class="details">
+    <h2>Pass 2 — key steps</h2>
+    <p class="sub">One numbered path per box: what actually runs, in order, verified against source.
+      Arb-relevant boxes get the full sequence; everything else gets the short version.</p>
+
+    <div class="detail-grid">
+      <!-- ============ BOT COLUMN ============ -->
+      <div class="detail-col" style="--accent: var(--copper); --accent-tint: var(--copper-tint);">
+        <h3 class="col-title">catscope-rust-bot — WASM guest</h3>
+
+        <div class="step-card">
+          <h4>event_loop.rs</h4>
+          <p class="role">the poll loop every module above runs inside</p>
+          <ol class="steps">
+            <li><code>on_load()</code> builds the account-subscription <code>Graph</code>, registers callbacks, flushes any startup messages</li>
+            <li>loop: <code>general::ready()</code> blocks for the next WIT wake-up — either stdin or a registered event id</li>
+            <li>stdin data → queued as <code>Event::Stdin</code>; an event id → runs its callback, which queues the real typed event</li>
+            <li>drains the queue into <code>handler.on_event()</code>, one call per event, then <code>handler.flush()</code></li>
+          </ol>
+        </div>
+
+        <div class="step-card">
+          <h4>arbv1 — cross-DEX price arbitrage</h4>
+          <p class="role">the real price-arb strategy</p>
+          <ol class="steps">
+            <li><code>on_load</code>: subscribe to Orca Whirlpool + Sanctum S Controller pools, register mints, build the <code>TradeRouter</code> price graph</li>
+            <li>every event updates pool/account state — <code>LowLatency</code> (~400ms, processed), <code>Commit</code> (~12s, rooted), <code>Transaction</code>, <code>SlotStatus</code>, <code>Stdin</code> (wallet key + ALT from Go)</li>
+            <li>on each <code>Commit</code>: <code>planner::find_opportunity()</code> — cheap probe cycle first, then a real-size re-search at actual wallet balance (slippage-aware), kept only if profitable</li>
+            <li><code>evaluate()</code> runs after <em>every</em> event: warm-up gate (<code>slot_delta ≥ 20</code> and <code>tx_count ≤ 10</code>), then <code>build_execution_plan()</code></li>
+            <li><code>build_execution_plan()</code>: for each hop, <code>dex.execute_hop()</code> builds the swap instruction into a scratch wallet; nets the profit in lamports if the start token is SOL</li>
+            <li><code>wallet.assemble()</code> drains the built tx(es) → sends via <code>transactionprocessor::send()</code>, tracks the signature, flips buy/sell direction</li>
+          </ol>
+          <div class="caveat"><b>TODAY</b><code>MIN_PROFIT_BPS = 0</code> — any non-negative cycle currently passes; there's no real profitability floor yet.</div>
+        </div>
+
+        <div class="step-card">
+          <h4>perpfundingv1 — funding-rate arbitrage</h4>
+          <p class="role">the real funding strategy</p>
+          <ol class="steps">
+            <li>every epoch: <code>observe_phoenix()</code> / <code>observe_velocity()</code> record each venue's annualized funding rate per shared symbol</li>
+            <li><code>close_epoch()</code> — hourly, matching both venues' real on-chain <code>funding_period</code> — builds a <code>FundingEdge</code> for every symbol both venues reported: long the cheap venue, short the expensive one</li>
+            <li>pushes a new <code>GraphLayer</code>, evicts the oldest once over <code>max_layers</code></li>
+            <li><code>execute_spot_leg</code> can sign a real transaction with the child key — nothing calls it automatically yet</li>
+          </ol>
+        </div>
+
+        <div class="step-card">
+          <h4>testperpv1 — real-tx smoke test</h4>
+          <p class="role">not a strategy — proves the pipeline</p>
+          <ol class="steps">
+            <li>literal copy of perpfundingv1's module shape (same <code>EventHandler</code>, same event flow)</li>
+            <li><code>evaluate()</code> swapped out: bootstrap a Solend obligation, deposit a small amount of USDC, withdraw it</li>
+            <li>repeat the same deposit/withdraw check against Kamino</li>
+            <li>closes the one real gap this session found: earlier Python/<code>solders</code> scripts verified instruction shapes on mainnet directly, but never exercised the compiled WASM's own wallet-batching + signing path</li>
+          </ol>
+        </div>
+
+        <div class="step-card">
+          <h4>trader/ — the quant engine</h4>
+          <p class="role">shared by arbv1 and perpfundingv1, not a strategy itself</p>
+          <div class="engine-grid">
+            <div class="engine-item">
+              <h5>pricegraph.rs</h5>
+              <ol class="steps compact">
+                <li><code>PriceGraph</code>: fair prices via Bellman-Ford on <code>−ln(rate)</code> edges</li>
+                <li><code>TradeRouter.find_arbitrage()</code>: same DAG, SPFA negative-cycle search</li>
+                <li><code>find_arbitrage_slippage_aware()</code>: re-searches with real <code>cp_quote</code>-composed amounts</li>
+              </ol>
+            </div>
+            <div class="engine-item">
+              <h5>spfa.rs</h5>
+              <ol class="steps compact">
+                <li>SIMD 2-lane relaxation loop (WASM <code>v128</code>) per SPFA queue pop</li>
+                <li>Small-Label-First queue ordering keeps convergence fast</li>
+                <li><code>detect_negative_cycle_excluding()</code> reruns minus a found cycle's edges, to surface distinct candidates</li>
+              </ol>
+            </div>
+            <div class="engine-item">
+              <h5>planner.rs</h5>
+              <ol class="steps compact">
+                <li><code>find_opportunity()</code>: probe at <code>PROBE_AMOUNT_RAW</code> (1,000,000) to pick a start token</li>
+                <li>re-search at real balance, capped at <code>REAL_SIZE_MAX_HOPS</code> (4) hops</li>
+                <li><code>reverify_with_exact_quotes()</code>: re-checks Orca CLMM hops against exact tick-aware quotes — catches false positives the constant-product approximation misses</li>
+              </ol>
+            </div>
+            <div class="engine-item">
+              <h5>perp_router.rs</h5>
+              <ol class="steps compact">
+                <li>time-layered directed multigraph — nodes are venues (Phoenix, Velocity/Drift)</li>
+                <li>edges are per-asset <code>FundingEdge</code> spreads between venues</li>
+                <li>layers are hourly snapshots, retained as a sequence — not overwritten</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <h4>wallet.rs · tx.rs</h4>
+          <p class="role">signing and submission</p>
+          <ol class="steps">
+            <li>holds the child keypair; <code>execute_hop</code> / <code>execute_spot_leg</code> write instructions into it</li>
+            <li><code>assemble()</code> drains whatever got built; <code>tx.rs</code> submits and tracks signature/slot</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- ============ OPTIMIZER COLUMN ============ -->
+      <div class="detail-col" style="--accent: var(--teal); --accent-tint: var(--teal-tint);">
+        <h3 class="col-title">optimizer — Go host</h3>
+
+        <div class="step-card">
+          <h4>prefetch/* → prefetch.db</h4>
+          <p class="role"><code>cmd download-arb</code></p>
+          <ol class="steps">
+            <li>dial the Solpipe bidder daemon to reach the validator</li>
+            <li>per-protocol fetchers (orca, raydium amm/clmm/cpmm, sanctum, kamino, marginfi, solend, drift, pumpfun, pumpswap, phoenix) pull pool/reserve accounts over gRPC</li>
+            <li>write into one unified <code>prefetch.db</code> — the same file <code>build.rs</code> reads at compile time and <code>cmd/dashboard.go</code> reads live</li>
+          </ol>
+        </div>
+
+        <div class="step-card">
+          <h4>arbv1 — Go orchestrator</h4>
+          <p class="role">allocate → upload → handshake → wallet</p>
+          <ol class="steps">
+            <li><code>Init()</code>: <code>bidmgr.Allocate(bid=0)</code> on a target pipeline — the free, non-voting Catscope validator</li>
+            <li>build or download the WASM image with <code>MODE=arbv1</code>, upload — retries every 30s, 5 minute timeout</li>
+            <li>wait for handshake, start the <code>loopInstance</code> goroutine</li>
+            <li><code>initWallet()</code>: derive the child key (index 1), subscribe its pubkey on the account graph, register both keys with the tx builder, send the wallet key to the bot over stdin</li>
+            <li><code>Evaluate()</code> fires on every solpipe/bidder state update: drains latency reports to a file, reads parent/child SOL balances</li>
+          </ol>
+          <div class="caveat"><b>TODAY</b>the actual SOL-funding-transfer logic is written but sits behind <code>if false</code>, and a balance/USD-check block is fully commented out — <code>Evaluate()</code> currently only logs, it takes no action.</div>
+        </div>
+
+        <div class="step-card">
+          <h4>perpfundingv1 / testperpv1 — Go orchestrators</h4>
+          <p class="role">same pipeline as arbv1 above, two differences</p>
+          <ol class="steps">
+            <li>same <code>Init()</code> → build/upload → handshake → <code>initWallet()</code> sequence, just <code>MODE=perpfundingv1</code> / <code>MODE=testperpv1</code></li>
+            <li>perpfundingv1's <code>Evaluate()</code> is a literal no-op — observation only, nothing to fund yet</li>
+            <li>testperpv1 additionally hands over the real wallet key, since its Rust side signs real deposit/withdraw transactions</li>
+          </ol>
+        </div>
+
+        <div class="step-card">
+          <h4>portfolio/</h4>
+          <p class="role">one implementation, two consumers</p>
+          <ol class="steps">
+            <li>reads <code>portfolio.db</code>, written separately by <code>watch-balances</code></li>
+            <li>same <code>Positions</code>/<code>Bots</code> calls used by <code>cmd/pnl.go</code> (renders HTML) and <code>shell/tools.go</code> (renders text for the LLM agent)</li>
+          </ol>
+        </div>
+
+        <div class="step-card">
+          <h4>cmd/* and shell/*</h4>
+          <p class="role">the two ways to look at prefetch.db / portfolio.db</p>
+          <ol class="steps">
+            <li><code>cmd/dashboard.go</code>: re-runs the summary queries against <code>prefetch.db</code> on every page load — read-only, no chain access</li>
+            <li><code>shell/session.go</code>: telnet listener spins up one goroutine per connection</li>
+            <li><code>shell/chat.go</code>: builds an eino react-agent over a local Ollama model; <code>shell/tools.go</code> exposes read-only queries (pnl, etc.) as agent tools</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

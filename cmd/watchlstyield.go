@@ -16,10 +16,9 @@ import (
 
 // WatchLstYieldCmd samples every real candidate LST's SOL-per-LST exchange
 // rate on an interval and appends it to prefetch.db's lst_yield_snapshot
-// table (see optimizer/prefetch/lst-yield) -- the real profitability
-// signal an LST-collateral leverage-loop strategy (originally built as
-// leveragedloopv1's Time-Expanded DAG, since removed) would need before
-// any loop mechanics are safe to act on.
+// table (see optimizer/prefetch/lst-yield) -- the Phase 0 dependency
+// catscope-rust-bot's leveraged-yield-farming plan and leveragedloopv1's
+// Time-Expanded DAG need before any loop mechanics are safe to act on.
 // Unlike watch-pnl/watch-balances, this doesn't touch a wallet at all --
 // every account it reads (Sanctum's shared lst_state_list account, each
 // LST's pool-reserves ATA) is public, so no fee-payer/signing key is

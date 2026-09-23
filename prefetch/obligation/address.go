@@ -8,16 +8,12 @@ import (
 	sgo "github.com/gagliardetto/solana-go"
 )
 
-// KaminoMainMarket is the single lending market every tracked trade
+// KaminoMainMarket is the single lending market every multimodelv1 trade
 // type's Kamino obligation lives in -- see catscope-rust-bot's
 // kamino::KAMINO_MAIN_MARKET (src/trader/dex/kamino.rs).
 var KaminoMainMarket = sgo.MustPublicKeyFromBase58("7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF")
 
-// TradeType is which strategy an obligation belongs to -- pair/
-// directional/hawkes were multimodelv1's trade types (since removed);
-// kept here because a real obligation any of them opened on-chain still
-// needs tracking by its exact id regardless of whether the Rust side
-// that opened it still exists.
+// TradeType is which multimodelv1 strategy an obligation belongs to.
 type TradeType string
 
 const (
@@ -35,13 +31,14 @@ const (
 )
 
 // TrackedObligation is one (protocol, trade_type) obligation this bot's
-// multimodelv1 mode (since removed) may have bootstrapped -- its id
-// mirrored the exact PAIR_*_OBLIGATION_ID/DIRECTIONAL_*_OBLIGATION_ID/
-// HAWKES_*_OBLIGATION_ID constants multimodelv1's Rust side used to
-// define. Kept as a fixed table rather than deleted -- any obligation
-// multimodelv1 actually opened on-chain is real and still needs tracking
-// by this exact id regardless of whether the Rust side that opened it
-// still exists.
+// multimodelv1 mode may have bootstrapped -- its id mirrors the exact
+// PAIR_*_OBLIGATION_ID/DIRECTIONAL_*_OBLIGATION_ID/HAWKES_*_OBLIGATION_ID
+// constants in catscope-rust-bot's src/brain/multimodelv1/state.rs. Kept
+// as a fixed table rather than derived generically -- multimodelv1 is
+// the only mode with more than one obligation per protocol today, and a
+// new trade type would need its own id constant on the Rust side first
+// anyway, so there's nothing this table could derive that isn't already
+// a real, load-bearing constant over there.
 var TrackedObligations = []struct {
 	TradeType TradeType
 	Protocol  Protocol

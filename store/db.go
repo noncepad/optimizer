@@ -15,6 +15,7 @@ import (
 	lstyield "git.noncepad.com/pkg/optimizer/prefetch/lst-yield"
 	"git.noncepad.com/pkg/optimizer/prefetch/marginfi"
 	"git.noncepad.com/pkg/optimizer/prefetch/mintinfo"
+	"git.noncepad.com/pkg/optimizer/prefetch/multimodel"
 	"git.noncepad.com/pkg/optimizer/prefetch/obligation"
 	"git.noncepad.com/pkg/optimizer/prefetch/orca"
 	"git.noncepad.com/pkg/optimizer/prefetch/perpfunding"
@@ -196,7 +197,7 @@ func (s *DB) migrate() error {
 		cpmm.Schema, clmm.Schema, amm.Schema, orca.Schema, kamino.Schema, sanctum.Schema, mintinfo.Schema,
 		marginfi.Schema, solend.Schema, drift.Schema, jet.Schema, pumpfun.Schema, pumpswap.Schema,
 		bundler.Schema,
-		phoenix.Schema, perpfunding.Schema, alt.Schema, pnl.Schema, lstyield.Schema,
+		phoenix.Schema, perpfunding.Schema, alt.Schema, pnl.Schema, lstyield.Schema, multimodel.Schema,
 		obligation.Schema,
 	} {
 		if _, err := s.db.Exec(ddl); err != nil {

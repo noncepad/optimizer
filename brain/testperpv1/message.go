@@ -21,7 +21,7 @@ package testperpv1
 //                            (every per-strategy scheme in this codebase
 //                            stays below 100).
 //
-// testperpv1's Rust side (src/brain/testperpv1/message.rs) has no use
+// perpfundingv1's Rust side (src/brain/perpfundingv1/message.rs) has no use
 // for TxLatency/LatencyReportV1/AddressLookupTable, so unlike arbv1's
 // message.go those types and key flags are omitted here entirely rather
 // than copied unused.

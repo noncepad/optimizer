@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -21,49 +19,20 @@ import (
 )
 
 // isTestperpBotNotConnectedYet is testperpv1's sendTriggerWithRetry
-// `retryable` check -- kept separate from sendTriggerWithRetry itself
-// since every bot-mode package defines its own ErrBotNotConnectedYet
-// sentinel.
+// `retryable` check -- see leveragedloop.go's isBotNotConnectedYet for
+// why this can't be baked into sendTriggerWithRetry itself (every
+// bot-mode package defines its own ErrBotNotConnectedYet sentinel).
 func isTestperpBotNotConnectedYet(err error) bool {
 	return errors.Is(err, testperpv1.ErrBotNotConnectedYet)
 }
 
-// triggerRetryMaxWait bounds sendTriggerWithRetry's total retry window.
-const triggerRetryMaxWait = 5 * time.Minute
-
-// sendTriggerWithRetry calls send, retrying every 5s (up to
-// triggerRetryMaxWait total) while retryable(err) reports the failure as
-// "bot not connected yet" rather than a real, permanent error.
-func sendTriggerWithRetry(ctx context.Context, entry *slog.Logger, label string, send func() error, retryable func(error) bool) {
-	deadline := time.Now().Add(triggerRetryMaxWait)
-	for {
-		err := send()
-		if err == nil {
-			entry.Info(fmt.Sprintf("%s sent", label))
-			return
-		}
-		if !retryable(err) {
-			entry.Error(fmt.Sprintf("%s failed: %s", label, err))
-			return
-		}
-		if time.Now().After(deadline) {
-			entry.Error(fmt.Sprintf("%s failed: bot still not connected after %s, giving up", label, triggerRetryMaxWait))
-			return
-		}
-		entry.Info(fmt.Sprintf("%s: bot not connected yet, retrying in 5s", label))
-		select {
-		case <-time.After(5 * time.Second):
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
-// TestPerpCmd mirrors ArbCmd's own allocation/prefetch/upload flow, except
-// it wires up testperpv1.Create, which uploads the WASM bot image with
-// MODE=testperpv1 selected. See catscope-rust-bot's src/brain/testperpv1
-// doc comment for what that mode actually does (a real-transaction
-// Solend/Kamino deposit/withdraw smoke test, not a trading strategy).
+// TestPerpCmd mirrors PerpCmd exactly -- same allocation/prefetch/upload
+// flow -- except it wires up testperpv1.Create instead of
+// perpfundingv1.Create, which uploads the WASM bot image with
+// MODE=testperpv1 selected instead of MODE=perpfundingv1. See
+// catscope-rust-bot's src/brain/testperpv1 doc comment for what that
+// mode actually does (a real-transaction Solend/Kamino deposit/withdraw
+// smoke test, not a trading strategy).
 type TestPerpCmd struct {
 	ParentKey                string        `arg:"fee-payer" help:"the file path to the fee payer (not bidder proxy fee payer)"`
 	WorkingDir               string        `option:"work" help:"working directory"`

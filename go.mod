@@ -9,7 +9,7 @@ go 1.25.4
 //replace git.noncepad.com/pkg/solpipe-util => ../solpipe-util
 
 require (
-	git.noncepad.com/pkg/bot v0.5.204
+	git.noncepad.com/pkg/bot v0.5.215
 	git.noncepad.com/pkg/safejar v0.4.15
 	git.noncepad.com/pkg/solpipe v0.4.13
 	git.noncepad.com/pkg/solpipe-util v0.5.222
@@ -17,6 +17,7 @@ require (
 	github.com/adrg/strutil v0.3.1
 	github.com/alecthomas/kong v1.15.0
 	github.com/cloudwego/eino v0.9.15
+	github.com/cloudwego/eino-ext/components/document/parser/pdf v0.0.0-20260909094858-6fe16d48b736
 	github.com/cloudwego/eino-ext/components/model/ollama v0.1.9
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
 	github.com/gagliardetto/binary v0.8.0
@@ -33,13 +34,11 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/blendle/zapdriver v1.3.1 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
-	github.com/cloudwego/eino-ext/components/document/parser/pdf v0.0.0-20260909094858-6fe16d48b736 // indirect
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.17 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect

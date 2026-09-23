@@ -8,7 +8,7 @@ package testperpv1
 //     account-usage tally into prefetch.db's account_usage table (see
 //     optimizer/prefetch/alt), the ranking source cmd/alt.go reads instead
 //     of scanning transaction history via RPC.
-// testperpv1 never sends a LatencyReportV1 on the Rust side, so there is
+// perpfundingv1 never sends a LatencyReportV1 on the Rust side, so there is
 // no corresponding case here (unlike arbv1's loopInstance).
 // It also pushes real LST staking-yield estimates (optimizer/prefetch/
 // lst-yield.EstimateAPY, fed by `optimizer watch-lst-yield` -- a separate

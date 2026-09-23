@@ -15,7 +15,7 @@ import (
 )
 
 // ErrBotNotConnectedYet is returned by SendBundlerTipUpdate while the bot
-// hasn't finished its handshake yet -- mirrors testperpv1's own
+// hasn't finished its handshake yet -- mirrors leveragedloopv1's own
 // sentinel of the same name. Not an error condition RunTipBroadcaster
 // treats specially; it just logs and retries on its next tick.
 var ErrBotNotConnectedYet = errors.New("arbv1: bot not connected yet")

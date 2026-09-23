@@ -67,7 +67,7 @@ type Configuration struct {
 // bare brain.Brain so cmd/*.go can call SendBundlerTipUpdate on the same
 // instance it hands to mothership.Create (a Hook value is itself a valid
 // brain.Brain, since this interface embeds it). Mirrors
-// testperpv1.Hook's own reasoning for its trigger-sender methods.
+// leveragedloopv1.Hook's own reasoning for its trigger-sender methods.
 type Hook interface {
 	brain.Brain
 	SendBundlerTipUpdate(update bundler.TipUpdate) error

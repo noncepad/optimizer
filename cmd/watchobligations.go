@@ -20,8 +20,8 @@ import (
 )
 
 // WatchObligationsCmd polls the trading wallet's own Solend/Kamino
-// lending obligations (one per multimodelv1 trade type, since removed --
-// see obligation.TrackedObligations) on an interval and records any
+// lending obligations (one per multimodelv1 trade type -- see
+// obligation.TrackedObligations) on an interval and records any
 // deposit/borrow that changed into prefetch.db's
 // obligation_position_snapshot table. Reads go through the same shared
 // internal state.Client (gRPC/geyser-backed graph, dialed via

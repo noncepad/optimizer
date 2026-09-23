@@ -74,8 +74,8 @@ const (
 	// Temporary kill switch (2026-09-04): when "true", catscope-rust-bot's
 	// build.rs generates an empty PHOENIX_MARKETS regardless of what's in
 	// prefetch.db's phoenix_market table, so no build has any real
-	// Phoenix market to find -- disables dispersion's short-index leg
-	// and testperpv1's perp checks alike.
+	// Phoenix market to find -- disables dispersion's short-index leg,
+	// perpfundingv1, phoenixperpsv1, and testperpv1's perp checks alike.
 	// Added after a real, live-confirmed incident: the trading wallet's
 	// Phoenix Eternal trader account was found frozen on-chain
 	// (TraderCapabilityFlags denies DepositCollateral/WithdrawCollateral/

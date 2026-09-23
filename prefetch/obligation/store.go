@@ -1,6 +1,6 @@
 // Package obligation records this bot's own Solend/Kamino lending
 // obligation state (deposits/borrows, across multimodelv1's pair/
-// directional/hawkes trade types, since removed) into prefetch.db, the same
+// directional/hawkes trade types) into prefetch.db, the same
 // skip-if-unchanged shape optimizer/prefetch/pnl uses for wallet token
 // balances -- see this package's schema.sql for the real motivation
 // (there was previously no way to see this state without manually

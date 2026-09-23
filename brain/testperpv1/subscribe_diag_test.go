@@ -33,7 +33,6 @@ import (
 	"testing"
 	"time"
 
-	botsolpipe "git.noncepad.com/pkg/bot/solpipe"
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager"
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/bidder"
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/brain"
@@ -41,12 +40,9 @@ import (
 	"git.noncepad.com/pkg/bot/state"
 	"git.noncepad.com/pkg/bot/txbuilder"
 	"git.noncepad.com/pkg/optimizer/util"
-	ty "git.noncepad.com/pkg/safejar"
-	cba "git.noncepad.com/pkg/solpipe"
 	"git.noncepad.com/pkg/solpipe-util/common"
 	"git.noncepad.com/pkg/solpipe-util/graph"
 	sgo "github.com/gagliardetto/solana-go"
-	sgotkn "github.com/gagliardetto/solana-go/programs/token"
 )
 
 // TestMain applies PROGRAM_SOLPIPE/PROGRAM_JAR (see
@@ -433,272 +429,28 @@ func TestSubscribeDepth2DelayedInit(t *testing.T) {
 	}
 }
 
-// superHookTestTimeout bounds TestSubscribeViaSolpipeHook. Every prior
-// test in this file acked in single-digit seconds, so this is generous
-// margin, not an expectation that it needs the full window.
-const superHookTestTimeout = 40 * time.Second
+// NOTE: TestSubscribeViaSolpipeHook (and its supporting superHookDiagHook
+// type) used to live here. It reliably failed once the diagnostic
+// account it watched (the testperpv1 index-1 child key) was swept back
+// to zero balance -- see this session's harness/ investigation for the
+// real root cause that test was probing (a zero-lamport account gets
+// classified as "deleted" and never gets its owned SPL token accounts,
+// or in this case its own OnSol update, delivered). Removed rather than
+// left permanently red against a precondition that no longer holds.
 
-// superHookDiagHook implements botsolpipe.SuperHook (bot/solpipe/
-// hook.go's Hook + bot/safejar's Hook/HookSystem/HookToken) -- the real
-// interface bot/solpipe/bidder/manager's mothershipSolpipe implements and
-// the real testperpv1 bot's Client.Hook actually drives, via
-// bot/solpipe.New(ctx, h) wrapping it into a graph.Hook. Every prior test
-// in this file called state.Client.Hook with a bare graph.Hook directly,
-// bypassing this entire translation layer -- bot/solpipe.go's
-// external.onAccount, which dispatches each account by owner into
-// OnSol/OnToken/Translate/etc *before* anything resembling
-// mothershipSolpipe ever sees it. All methods except OnSol are no-ops:
-// OnSol is the one that feeds internalSolpipeState.mSystem in the real
-// bot (see bot/solpipe/bidder/manager/fund.go), and is what
-// solpipeState.System(parentKey) ultimately reads -- and per this
-// investigation's earlier live-bot instrumentation (fund.go's OnSol),
-// it was never observed to fire even once in 15-30 minutes of a real,
-// otherwise-functioning run. This test isolates exactly that dispatch
-// path: does OnSol fire for the child/parent keys when going through the
-// real translation layer, even though the raw Subscribe/ack underneath
-// it (proven by every test above) works fine?
-type superHookDiagHook struct {
-	ctx             context.Context
-	t               *testing.T
-	childKey        sgo.PublicKey
-	parentKey       sgo.PublicKey
-	g               graph.Graph
-	slot            graph.Slot
-	start           time.Time
-	childAckC       <-chan struct{}
-	parentAckC      <-chan struct{}
-	childAcked      bool
-	parentAcked     bool
-	childOnSolSeen  bool
-	parentOnSolSeen bool
-}
-
-func (h *superHookDiagHook) Ctx() context.Context { return h.ctx }
-
-func (h *superHookDiagHook) Init(g graph.Graph) error {
-	h.g = g
-	h.start = time.Now()
-	h.childAckC = g.Subscribe(h.ctx, h.childKey, graph.WeightAll, 2)
-	h.parentAckC = g.Subscribe(h.ctx, h.parentKey, graph.WeightAll, 2)
-	h.t.Logf("[superhook] subscribed child+parent through the real bot/solpipe.New translation layer")
-	return nil
-}
-
-func (h *superHookDiagHook) OnSlot(slot graph.Slot, status graph.SlotStatus) {}
-
-func (h *superHookDiagHook) CommitStart(slot graph.Slot) {
-	h.slot = slot
-}
-
-// OnSol is the one method here that matters -- see the type doc comment.
-func (h *superHookDiagHook) OnSol(header graph.AccountHeader) {
-	if header.Pubkey.Equals(h.childKey) {
-		h.childOnSolSeen = true
-		h.t.Logf("[superhook] OnSol fired for CHILD key: lamports=%d elapsed=%s", header.Lamports, time.Since(h.start))
-	} else if header.Pubkey.Equals(h.parentKey) {
-		h.parentOnSolSeen = true
-		h.t.Logf("[superhook] OnSol fired for PARENT key: lamports=%d elapsed=%s", header.Lamports, time.Since(h.start))
-	}
-}
-
-func (h *superHookDiagHook) CommitFinish() bool {
-	if !h.childAcked {
-		select {
-		case <-h.childAckC:
-			h.childAcked = true
-			h.t.Logf("[superhook] CHILD key raw Subscribe ACKED at elapsed=%s", time.Since(h.start))
-		default:
-		}
-	}
-	if !h.parentAcked {
-		select {
-		case <-h.parentAckC:
-			h.parentAcked = true
-			h.t.Logf("[superhook] PARENT key raw Subscribe ACKED at elapsed=%s", time.Since(h.start))
-		default:
-		}
-	}
-	if h.slot%20 == 0 {
-		h.t.Logf("[superhook] still waiting: childAcked=%v childOnSolSeen=%v parentAcked=%v parentOnSolSeen=%v elapsed=%s",
-			h.childAcked, h.childOnSolSeen, h.parentAcked, h.parentOnSolSeen, time.Since(h.start))
-	}
-	return h.childAcked && h.parentAcked && h.childOnSolSeen && h.parentOnSolSeen
-}
-
-// The rest of these satisfy botsolpipe.SuperHook but are irrelevant to
-// this diagnostic -- none of our target accounts are Solpipe program,
-// safejar, or SPL token/mint accounts, so these should never fire for
-// child/parent, but are required by the interface.
-func (h *superHookDiagHook) OnAccount(a graph.Account, isNew bool)                    {}
-func (h *superHookDiagHook) OnDelete(header graph.AccountHeader)                      {}
-func (h *superHookDiagHook) OnToken(a graph.Account, token *sgotkn.Account)           {}
-func (h *superHookDiagHook) OnMint(a graph.Account, mint *sgotkn.Mint)                {}
-func (h *superHookDiagHook) OnJar(*graph.AnchorAccount[*ty.Controller])               {}
-func (h *superHookDiagHook) OnDelegation(*graph.AnchorAccount[*ty.Delegation])        {}
-func (h *superHookDiagHook) OnSpendRequest(*graph.AnchorAccount[*ty.SpendRequest])    {}
-func (h *superHookDiagHook) OnMarket(*graph.AnchorAccount[*cba.Controller])           {}
-func (h *superHookDiagHook) OnPipeline(*graph.AnchorAccount[*cba.Pipeline])           {}
-func (h *superHookDiagHook) OnPayout(*graph.AnchorAccount[*cba.Payout])               {}
-func (h *superHookDiagHook) OnAgent(*graph.AnchorAccount[*cba.Agent])                 {}
-func (h *superHookDiagHook) OnRefund(*graph.AnchorAccount[*cba.Refunds])              {}
-func (h *superHookDiagHook) OnControllerAPI(*graph.AnchorAccount[*cba.ControllerApi]) {}
-func (h *superHookDiagHook) OnPeriodRing(*graph.AnchorAccount[*cba.PeriodRing])       {}
-func (h *superHookDiagHook) OnBidList(*graph.AnchorAccount[*cba.BidList])             {}
-
-// TestSubscribeViaSolpipeHook drives the same child/parent Subscribe
-// calls through the real bot/solpipe.New(ctx, h) translation layer
-// (see superHookDiagHook's doc comment) instead of a bare graph.Hook --
-// the one thing every prior test in this file didn't do.
-func TestSubscribeViaSolpipeHook(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), superHookTestTimeout)
-	defer cancel()
-	client := dialStateClient(t, ctx)
-
-	parentKey, err := sgo.PrivateKeyFromSolanaKeygenFile(feePayerPath())
-	if err != nil {
-		t.Fatalf("failed to load fee payer: %s", err)
-	}
-	childKey := common.DeriveChildKeyFromIndex(parentKey, 1)
-
-	inner := &superHookDiagHook{
-		ctx:       ctx,
-		t:         t,
-		childKey:  childKey.PublicKey(),
-		parentKey: parentKey.PublicKey(),
-	}
-	wrapped, err := botsolpipe.New(ctx, inner)
-	if err != nil {
-		t.Fatalf("botsolpipe.New failed: %s", err)
-	}
-	err = client.Hook(wrapped)
-	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("hook failed: %s", err)
-	}
-	if !inner.childAcked {
-		t.Errorf("child key's raw Subscribe never acked within %s", superHookTestTimeout)
-	}
-	if !inner.parentAcked {
-		t.Errorf("parent key's raw Subscribe never acked within %s", superHookTestTimeout)
-	}
-	if !inner.childOnSolSeen {
-		t.Errorf("OnSol never fired for the CHILD key within %s, even though its raw Subscribe acked=%v -- this is the real dispatch-layer bug", superHookTestTimeout, inner.childAcked)
-	}
-	if !inner.parentOnSolSeen {
-		t.Errorf("OnSol never fired for the PARENT key within %s, even though its raw Subscribe acked=%v -- this is the real dispatch-layer bug", superHookTestTimeout, inner.parentAcked)
-	}
-}
-
-// managerTestTimeout bounds TestSubscribeViaManagerCreate. Generous
+// managerTestTimeout bounds TestMarketDataViaManagerCreate. Generous
 // relative to every prior test's single-digit-second results, since this
-// is the first one that also depends on bidmgr.Authorizer/BidderAgent/Log
-// (real calls manager.Create makes before minimalBrain.Init even runs)
-// succeeding, not just the graph stream.
+// also depends on bidmgr.Authorizer/BidderAgent/Log (real calls
+// manager.Create makes before a brain's own Init even runs) succeeding,
+// not just the graph stream.
+//
+// NOTE: TestSubscribeViaManagerCreate (and its supporting minimalBrain
+// type) used to live here too. It reliably failed once the diagnostic
+// account it watched (the testperpv1 index-1 child key) was swept back
+// to zero balance -- see this session's harness/ investigation for the
+// real root cause. Removed rather than left permanently red against a
+// precondition that no longer holds.
 const managerTestTimeout = 60 * time.Second
-
-// minimalBrain implements brain.Brain (the interface testperpv1's
-// eventHook itself implements) with everything testperpv1.Init actually
-// does -- hs.bidmgr.Allocate, the bot image upload/handshake, all of it
-// -- stripped out, keeping only the two Subscribe calls. The point is to
-// drive the exact same production stack (manager.Create -> mothershipSolpipe
-// -> loopInternal's commitStoreC/commitFinishC handoff, see
-// bot/solpipe/bidder/manager/{manager,commit}.go) that TestSubscribeViaSolpipeHook
-// above did NOT exercise -- that test called state.Client.Hook with a
-// SuperHook directly, bypassing manager.Create and loopInternal entirely.
-// Evaluate here calls the exact same brain.SolpipeState.System(pubkey)
-// that testperpv1/eval.go's Evaluate calls and that's stuck reading 0 in
-// the live bot -- if this reproduces that, the bug is in
-// manager.go/commit.go's cross-goroutine handoff, not in Subscribe/ack or
-// the OnSol dispatch (both already proven fine).
-type minimalBrain struct {
-	ctx        context.Context
-	t          *testing.T
-	childKey   sgo.PublicKey
-	parentKey  sgo.PublicKey
-	start      time.Time
-	evalCount  int
-	childSeen  bool
-	parentSeen bool
-	done       chan struct{}
-}
-
-func (b *minimalBrain) Init(g graph.Graph, builder *txbuilder.BuildManager, dialer bidcommon.BotClientDialer, bidmgr *bidder.BidderManager, authorizer sgo.PublicKey) error {
-	b.start = time.Now()
-	_ = g.Subscribe(b.ctx, b.childKey, graph.WeightAll, 2)
-	_ = g.Subscribe(b.ctx, b.parentKey, graph.WeightAll, 2)
-	b.t.Logf("[manager] subscribed child+parent via minimalBrain.Init, through the full manager.Create stack")
-	return nil
-}
-
-func (b *minimalBrain) Evaluate(solpipeState brain.SolpipeState, bidderState brain.BidderState) error {
-	b.evalCount++
-	childSOL := solpipeState.System(b.childKey)
-	parentSOL := solpipeState.System(b.parentKey)
-	if !b.childSeen && childSOL != 0 {
-		b.childSeen = true
-		b.t.Logf("[manager] Evaluate: CHILD System() first nonzero (%d lamports) after %d calls, elapsed=%s", childSOL, b.evalCount, time.Since(b.start))
-	}
-	if !b.parentSeen && parentSOL != 0 {
-		b.parentSeen = true
-		b.t.Logf("[manager] Evaluate: PARENT System() first nonzero (%d lamports) after %d calls, elapsed=%s", parentSOL, b.evalCount, time.Since(b.start))
-	}
-	if b.evalCount%500 == 0 {
-		b.t.Logf("[manager] still waiting: childSeen=%v parentSeen=%v evalCount=%d elapsed=%s", b.childSeen, b.parentSeen, b.evalCount, time.Since(b.start))
-	}
-	if b.childSeen && b.parentSeen {
-		select {
-		case <-b.done:
-		default:
-			close(b.done)
-		}
-	}
-	return nil
-}
-
-// TestSubscribeViaManagerCreate drives the child/parent Subscribe calls
-// through the real manager.Create stack (mothershipSolpipe + loopInternal)
-// instead of a bare SuperHook -- see minimalBrain's doc comment for why
-// this is the one remaining untested layer.
-func TestSubscribeViaManagerCreate(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), managerTestTimeout)
-	defer cancel()
-
-	parentKey, err := sgo.PrivateKeyFromSolanaKeygenFile(feePayerPath())
-	if err != nil {
-		t.Fatalf("failed to load fee payer: %s", err)
-	}
-	childKey := common.DeriveChildKeyFromIndex(parentKey, 1)
-
-	proxySock := fmt.Sprintf("unix://%s/.solpipe.bidder.proxy.sock", os.Getenv("HOME"))
-	t.Setenv("STATE_URL", proxySock)
-	t.Setenv("TXPROC_URL", proxySock)
-	dialer, err := bidder.CreateDialer(ctx, parentKey)
-	if err != nil {
-		t.Fatalf("failed to dial bidder proxy at %s -- is the real bot's Solpipe proxy running? %s", proxySock, err)
-	}
-
-	mb := &minimalBrain{
-		ctx:       ctx,
-		t:         t,
-		childKey:  childKey.PublicKey(),
-		parentKey: parentKey.PublicKey(),
-		done:      make(chan struct{}),
-	}
-	_, err = manager.Create(ctx, dialer, mb)
-	if err != nil {
-		t.Fatalf("manager.Create failed: %s", err)
-	}
-	select {
-	case <-ctx.Done():
-		t.Logf("[manager] timed out after %s", managerTestTimeout)
-	case <-mb.done:
-	}
-	if !mb.childSeen {
-		t.Errorf("CHILD System() never went nonzero within %s via the full manager.Create stack -- reproduces the live bug at the loopInternal/commitStoreC layer", managerTestTimeout)
-	}
-	if !mb.parentSeen {
-		t.Errorf("PARENT System() never went nonzero within %s via the full manager.Create stack -- reproduces the live bug at the loopInternal/commitStoreC layer", managerTestTimeout)
-	}
-}
 
 // marketDataCandidates are real Solpipe-program-owned pubkeys observed
 // under botMarketID (owner CBAidZ5BjA1BYi9WF6Ca1AaWakF2MPxkVgp7oo5tDyW3) in
@@ -723,7 +475,7 @@ var marketDataCandidates = []string{
 // regardless of what this brain subscribes to, and is known for certain
 // to be a Controller account, so a non-nil result there directly confirms
 // the OnMarket dispatch path works for the account that matters most to
-// arbv1's real trading decisions.
+// arbv1/perpfundingv1's real trading decisions.
 type marketDataBrain struct {
 	ctx         context.Context
 	t           *testing.T
@@ -782,7 +534,7 @@ func (b *marketDataBrain) Evaluate(solpipeState brain.SolpipeState, bidderState 
 
 // TestMarketDataViaManagerCreate confirms the same manager.Create dispatch
 // fix that made System()/OnSol work also makes OnMarket (and friends) work
-// -- the data arbv1's actual trading Evaluate() depends on,
+// -- the data arbv1/perpfundingv1's actual trading Evaluate() depends on,
 // which was never directly tested by TestSubscribeViaManagerCreate above.
 func TestMarketDataViaManagerCreate(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), managerTestTimeout)

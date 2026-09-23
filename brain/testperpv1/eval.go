@@ -14,7 +14,7 @@ import (
 )
 
 // ErrBotNotConnectedYet is returned by SendBundlerTipUpdate while the bot
-// hasn't finished its handshake yet -- mirrors arbv1's own
+// hasn't finished its handshake yet -- mirrors leveragedloopv1's own
 // sentinel of the same name. Not an error condition RunTipBroadcaster
 // treats specially; it just logs and retries on its next tick.
 var ErrBotNotConnectedYet = errors.New("testperpv1: bot not connected yet")
@@ -90,9 +90,9 @@ const targetParentRemainingLamports = 80_000_000
 // does is a single, one-time "boot transfer": move everything above
 // targetParentRemainingLamports from the parent fee-payer to the child
 // key, gated by hs.didBootTransfer so it only ever fires once. No latency
-// reports to drain here, unlike arbv1's Evaluate -- testperpv1's Rust
-// side drives its whole test off on-chain state, not anything pushed
-// from the Go side.
+// reports to drain here, unlike arbv1/perpfundingv1's Evaluate this was
+// copied from -- testperpv1's Rust side drives its whole test off
+// on-chain state, not anything pushed from the Go side.
 func (hs *eventHook) Evaluate(solpipeState brain.SolpipeState, bidderState brain.BidderState) error {
 	if hs.didBootTransfer {
 		return nil
@@ -151,7 +151,7 @@ func (hs *eventHook) Evaluate(solpipeState brain.SolpipeState, bidderState brain
 // Placeholder value: 100% USDC. There's no explicit "USDC" entry to
 // set -- per the convention established on the Rust side
 // (target_allocation_pct's doc, catscope-rust-bot's
-// src/brain/testperpv1/state.rs), USDC is always the implicit
+// src/brain/perpfundingv1/state.rs), USDC is always the implicit
 // remainder, 1.0 minus every tracked symbol's allocation. An empty map
 // means every tracked symbol is 0%, so the full 1.0 falls to USDC --
 // deliberate, not an unset/error state.
