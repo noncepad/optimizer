@@ -51,7 +51,7 @@ func (hs *eventHook) Init(g graph.Graph, builder *txbuilder.BuildManager, addres
 	entry.With(logger.Loc("init", 3)).Info("setting allocation; waiting for bidder proxy to connect with pipeline")
 
 	mEnv := make(map[string]string, 2)
-	// TargetProtocol == "native_lite" selects testperplatencyv1lite
+	// TargetProtocol == "native_lite" selects testlatencylitev1
 	// instead of the real testperplatencyv1 -- an experimental,
 	// byte-for-byte copy of the same Rust module with the DEX/Solend/
 	// Kamino/Marginfi subscription setup stripped out of on_load(), to
@@ -59,11 +59,11 @@ func (hs *eventHook) Init(g graph.Graph, builder *txbuilder.BuildManager, addres
 	// the real module, for every protocol, even though the native-
 	// transfer test never touches any of it) is actually contributing
 	// measurable backpressure to the native-transfer latency numbers.
-	// See catscope-rust-bot's src/brain/testperplatencyv1lite/mod.rs doc
+	// See catscope-rust-bot's src/brain/testlatencylitev1/mod.rs doc
 	// comment for the full story. Delete this branch (and that whole
 	// Rust module) once that question is settled.
 	if hs.config.TargetProtocol == "native_lite" {
-		mEnv["MODE"] = "testperplatencyv1lite"
+		mEnv["MODE"] = "testlatencylitev1"
 	} else {
 		mEnv["MODE"] = "testperplatencyv1"
 	}
@@ -77,7 +77,7 @@ func (hs *eventHook) Init(g graph.Graph, builder *txbuilder.BuildManager, addres
 	if 0 < len(hs.config.TargetProtocol) {
 		// "native_lite" (see above) is a Go-side-only sentinel for which
 		// MODE to upload -- the Rust module it selects
-		// (testperplatencyv1lite) only ever understands "native" itself
+		// (testlatencylitev1) only ever understands "native" itself
 		// (see that module's own `TestProtocol::from_env`), so it's
 		// normalized here rather than taught a second alias on the Rust
 		// side for a value that's only ever meaningful to this branch.

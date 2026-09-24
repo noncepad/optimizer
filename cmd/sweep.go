@@ -25,7 +25,7 @@ import (
 type SweepCmd struct {
 	ParentKey string `arg:"fee-payer" help:"the file path to the fee payer (parent wallet)"`
 	// Generous relative to a real native transfer's typical ~1-2 slot
-	// confirmation (see this session's own testperplatencyv1lite runs) --
+	// confirmation (see this session's own testlatencylitev1 runs) --
 	// this treasury's graph subscription is brand new to this command and
 	// its actual warm-up latency hasn't been measured yet, so this errs
 	// wide rather than risk sweeping against stale (zero) balances.

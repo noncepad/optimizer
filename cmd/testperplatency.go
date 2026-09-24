@@ -18,7 +18,7 @@ import (
 	sgo "github.com/gagliardetto/solana-go"
 )
 
-// TestPerpLatencyCmd mirrors TestPerpCmd exactly -- same
+// TestLatencyLiteV1Cmd mirrors TestPerpCmd exactly -- same
 // allocation/prefetch/upload flow -- except it wires up
 // testperplatencyv1.Create instead of testperpv1.Create, which uploads the
 // WASM bot image with MODE=testperplatencyv1 selected instead of
@@ -27,7 +27,7 @@ import (
 // catscope-rust-bot's src/brain/testperplatencyv1 doc comment for what
 // that mode actually does (a real-transaction, CYCLE_TARGET-times-repeated
 // deposit/withdraw latency test, not a trading strategy).
-type TestPerpLatencyCmd struct {
+type TestLatencyLiteV1Cmd struct {
 	ParentKey  string `arg:"fee-payer" help:"the file path to the fee payer (not bidder proxy fee payer)"`
 	WorkingDir string `option:"work" help:"working directory"`
 	// Protocol scopes a real run to just one protocol's deposit<->withdraw
@@ -48,7 +48,7 @@ type TestPerpLatencyCmd struct {
 	Protocol string `option:"protocol" help:"which single protocol to run (solend/kamino/marginfi/native/native_lite) -- leave unset to run the original full unscoped sequence"`
 }
 
-func (r *TestPerpLatencyCmd) Run(rc *RunConfig) error {
+func (r *TestLatencyLiteV1Cmd) Run(rc *RunConfig) error {
 	parentKey, err := sgo.PrivateKeyFromSolanaKeygenFile(r.ParentKey)
 	if err != nil {
 		return fmt.Errorf("failed to load authorizer: %s", err)
@@ -75,7 +75,7 @@ func (r *TestPerpLatencyCmd) Run(rc *RunConfig) error {
 	} else {
 		stateClient = dialer.State()
 	}
-	// TestPerpLatencyCmd only ever reads the prefetch database that
+	// TestLatencyLiteV1Cmd only ever reads the prefetch database that
 	// DownloadArbCmd already populated at this fixed path — it does not
 	// fetch on-chain dex state itself, regardless of r.WorkingDir.
 	prefetchDB, err := store.Open(getDBFilePath())

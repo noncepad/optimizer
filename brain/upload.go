@@ -16,7 +16,7 @@ import (
 // Hook.Request; the result (a *Bot, or an error) arrives on ResultC.
 type UploadRequest struct {
 	// Mode is the MODE env var the WASM bot image dispatches on at
-	// startup (e.g. "arbv1", "testperpv1", "testperplatencyv1lite") --
+	// startup (e.g. "arbv1", "testperpv1", "testlatencylitev1") --
 	// see catscope-rust-bot's brain::mod BotMode::from_env.
 	Mode string
 	// BotImagePath is a local path to compile from; empty downloads the

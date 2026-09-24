@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"git.noncepad.com/pkg/bot/state"
-	"git.noncepad.com/pkg/optimizer/chainstate"
 	"git.noncepad.com/pkg/optimizer/prefetch/alt"
+	"git.noncepad.com/pkg/optimizer/store"
 	sgo "github.com/gagliardetto/solana-go"
 	addresslookuptable "github.com/gagliardetto/solana-go/programs/address-lookup-table"
 	"github.com/gagliardetto/solana-go/rpc"
@@ -55,20 +54,20 @@ func (r *AltCmd) Run(rc *RunConfig) error {
 		r.TopN = 256
 	}
 
-	chainState, err := chainstate.Create(ctx, getDBFilePath(), state.Client{})
+	prefetchDB, err := store.Open(getDBFilePath())
 	if err != nil {
 		return fmt.Errorf("open prefetch db: %w", err)
 	}
 	defer func() {
-		_ = chainState.Close()
+		_ = prefetchDB.Close()
 	}()
 
-	accounts, err := alt.TopUsedAccounts(chainState.Database().Raw(), r.TopN)
+	accounts, err := alt.TopUsedAccounts(prefetchDB.Raw(), r.TopN)
 	if err != nil {
 		return fmt.Errorf("query account_usage: %w", err)
 	}
 
-	fmt.Printf("%d account(s) ranked by reported usage in %s\n", len(accounts), chainState.Database().FilePath())
+	fmt.Printf("%d account(s) ranked by reported usage in %s\n", len(accounts), prefetchDB.FilePath())
 	for i, pk := range accounts {
 		fmt.Printf("  %3d. %s\n", i+1, pk)
 	}
@@ -120,11 +119,11 @@ func (r *AltCmd) Run(rc *RunConfig) error {
 		}
 	}
 
-	if err := alt.Replace(chainState.Database().Raw(), tableAddr, accounts); err != nil {
+	if err := alt.Replace(prefetchDB.Raw(), tableAddr, accounts); err != nil {
 		return fmt.Errorf("persist lookup table to prefetch.db: %w (the lookup table was created and populated on-chain regardless -- rerun with --table=%s --no-dry-run to retry the write)", err, tableAddr)
 	}
 
-	fmt.Printf("\ncreated lookup table %s with %d account(s); persisted to %s\n", tableAddr, len(accounts), chainState.Database().FilePath())
+	fmt.Printf("\ncreated lookup table %s with %d account(s); persisted to %s\n", tableAddr, len(accounts), prefetchDB.FilePath())
 	fmt.Println("the table needs ~1 slot of warmup before it's usable in a transaction -- by the time catscope-rust-bot is rebuilt and restarted to pick up the new prefetch.db, that will already have long passed.")
 	return nil
 }

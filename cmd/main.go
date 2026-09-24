@@ -30,7 +30,7 @@ type CLI struct {
 	DownloadArb      DownloadArbCmd      `cmd:"arb" help:"Run arbv1."`
 	Perp             PerpCmd             `cmd:"perp" help:"Run perpfundingv1."`
 	Testperp         TestPerpCmd         `cmd:"testperp" help:"Run testperpv1 (real-transaction Solend/Kamino deposit/withdraw smoke test)."`
-	TestperpLatency  TestPerpLatencyCmd  `cmd:"testperplatency" help:"Run testperplatencyv1 (real-transaction, 100x-cycled deposit/withdraw latency test -- use --protocol to scope to one protocol)."`
+	TestLatency      TestLatencyLiteV1Cmd  `cmd:"test-latency" help:"Run testperplatencyv1 (real-transaction, 100x-cycled deposit/withdraw latency test -- use --protocol to scope to one protocol)."`
 	Balance          BalanceCmd          `cmd:"balance" help:"Get the balance for the trading wallet."`
 	Summary          SummaryCmd          `cmd:"summary" help:"Print a summary of what's in prefetch.db."`
 	Dashboard        DashboardCmd        `cmd:"dashboard" help:"Serve a local HTML dashboard for prefetch.db."`
@@ -50,7 +50,7 @@ type CLI struct {
 	// `Latencyreport` is spelled as one un-capitalized-internally word on
 	// purpose so kebab-casing doesn't insert a hyphen into the command
 	// name.
-	Latencyreport LatencyReportCmd `cmd:"latencyreport" help:"Turn a native-transfer latency run's log (testperplatencyv1/testperplatencyv1lite) into an HTML report."`
+	Latencyreport LatencyReportCmd `cmd:"latencyreport" help:"Turn a native-transfer latency run's log (testperplatencyv1/testlatencylitev1) into an HTML report."`
 }
 
 type VersionCmd struct{}

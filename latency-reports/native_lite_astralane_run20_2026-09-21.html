@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Native transfer latency run — 20/20</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --surface-2: #eef1f4; --border: #dde2e7;
+    --text: #161b22; --text-dim: #5c6773;
+    --account: #0e7c86; --account-bg: #e3f3f2;
+    --tx: #a66a12; --tx-bg: #f7ecd9;
+    --ok: #1a7f4e; --ok-bg: #e2f5ea;
+    --unknown: #6b7280; --unknown-bg: #eceef1;
+    --focus: #2f6fed;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1316; --surface: #151b1f; --surface-2: #1b2227; --border: #28323a;
+      --text: #e7ecef; --text-dim: #8a97a3;
+      --account: #4ad9c9; --account-bg: #133633;
+      --tx: #f2b544; --tx-bg: #3a2e10;
+      --ok: #5fd399; --ok-bg: #123023;
+      --unknown: #9aa4ae; --unknown-bg: #232a30;
+      --focus: #6c9bff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1316; --surface: #151b1f; --surface-2: #1b2227; --border: #28323a;
+    --text: #e7ecef; --text-dim: #8a97a3;
+    --account: #4ad9c9; --account-bg: #133633;
+    --tx: #f2b544; --tx-bg: #3a2e10;
+    --ok: #5fd399; --ok-bg: #123023;
+    --unknown: #9aa4ae; --unknown-bg: #232a30;
+    --focus: #6c9bff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .page { max-width: 1300px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; display: flex; flex-direction: column; gap: 1.75rem; }
+  header h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.35rem; text-wrap: balance; }
+  header .meta { color: var(--text-dim); font-size: 0.85rem; font-family: "IBM Plex Mono", ui-monospace, monospace; word-break: break-all; }
+  .prose { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .prose h2 { font-size: 1.05rem; font-weight: 600; margin: 0; }
+  .prose p, .prose li { margin: 0; line-height: 1.6; font-size: 0.88rem; color: var(--text); }
+  .prose ul { margin: 0; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .prose code { font-family: "IBM Plex Mono", ui-monospace, monospace; background: var(--surface-2); border-radius: 4px; padding: 0.05rem 0.3rem; font-size: 0.85em; }
+  .prose dl { margin: 0; display: flex; flex-direction: column; gap: 0.7rem; }
+  .prose dt { font-family: "IBM Plex Mono", ui-monospace, monospace; font-weight: 600; font-size: 0.85rem; color: var(--text); }
+  .prose dt .kind { font-family: "IBM Plex Sans", sans-serif; font-weight: 400; font-style: italic; color: var(--text-dim); margin-left: 0.5rem; }
+  .prose dd { margin: 0.2rem 0 0; }
+  .caveat { background: var(--unknown-bg); color: var(--text-dim); border: 1px solid var(--border); border-radius: 10px; padding: 0.9rem 1.1rem; font-size: 0.82rem; line-height: 1.6; }
+  .caveat strong { color: var(--text); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+  .stat .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+  .stat .value { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+  .stat.LowLatency .value { color: var(--account); }
+  .stat.Transaction .value { color: var(--tx); }
+  .stat.Commit .value { color: var(--ok); }
+  .hint { color: var(--text-dim); font-size: 0.8rem; }
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: auto; max-height: 70vh; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  thead th { position: sticky; top: 0; background: var(--surface-2); text-align: left; padding: 0.6rem 0.8rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); border-bottom: 1px solid var(--border); cursor: pointer; white-space: nowrap; user-select: none; }
+  thead th:hover { color: var(--text); }
+  thead th.sorted::after { content: " " attr(data-dir); font-size: 0.7em; }
+  tbody td { padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border); font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface-2); }
+  th.highlight, td.highlight { background: var(--account-bg); }
+  tbody tr:hover td.highlight { background: var(--account-bg); filter: brightness(0.95); }
+  th.highlight { color: var(--account); }
+  .unresolved { color: var(--unknown); font-style: italic; }
+  .lane-badge { display: inline-flex; align-items: center; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.74rem; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+  .lane-badge.LowLatency { background: var(--account-bg); color: var(--account); }
+  .lane-badge.Transaction { background: var(--tx-bg); color: var(--tx); }
+  .lane-badge.Commit { background: var(--ok-bg); color: var(--ok); }
+  .route-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.74rem; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+  .route-badge.astralane { background: var(--ok-bg); color: var(--ok); }
+  .route-badge.direct { background: var(--surface-2); color: var(--text-dim); }
+  footer { color: var(--text-dim); font-size: 0.78rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Native transfer latency run — 20/20</h1>
+    <div class="meta">generated Tue, 22 Sep 2026 02:30:15 JST · source: /tmp/claude-1001/-home-naomi-work-catscope-rust-bot/d87f53cb-8ae4-461a-b839-d7a15a685cfb/scratchpad/t17_postreboot_sept9_run1.log</div>
+  </header>
+
+  <div class="prose">
+    <h2>What this test does</h2>
+    <p>This is a native-transfer latency test: it sends real SOL transfers, one at a time, and times how long each takes to be observed as confirmed. Each transfer races three independent, real update channels to see which one reports it first:</p>
+    <ul>
+      <li><strong>LowLatency</strong> -- a fast, speculative processed-tier account-balance update, the earliest signal Solana exposes for a change to an account.</li>
+      <li><strong>Commit</strong> -- a rooted/finalized-tier account-balance update, structurally further behind live (finality takes real time to accumulate).</li>
+      <li><strong>Transaction</strong> -- a direct signature match against the transaction list itself, independent of either account-balance stream.</li>
+    </ul>
+    <p>Whichever lane observes the expected result first wins and gets timed for that transfer -- the whole point of the comparison is seeing which lane actually wins in practice, and by how much.</p>
+    
+    <p>20 of 20 transfers were sent as a real, tipped <strong>Astralane</strong> bundle rather than a plain send -- see the Route column below for which.</p>
+    
+  </div>
+
+  
+  <div class="prose">
+    <h2>How the numbers below are calculated</h2>
+    <p>Every timestamp here comes from this guest's own clock, measured against two real events: the moment a transfer is sent, and the moment one of the three lanes above reports it. Nothing in the underlying data streams carries a timestamp for the transfer's actual on-chain execution instant -- only its landing slot number -- so several of these columns are <strong>bounds</strong>, not exact measurements. The table below is a literal glossary of every column:</p>
+    <dl>
+      <dt>Total =<span class="kind">exact</span></dt>
+      <dd>Real wall-clock time from send to whichever lane confirmed first. The only column here that's a direct measurement, not a bound or an estimate.</dd>
+      <dt>Write ≥<span class="kind">lower bound</span></dt>
+      <dd>Time from send until this guest first observed the transfer's landing slot beginning. Since the transfer could have executed anywhere within that slot -- not necessarily at its very start -- the real write time can run up to roughly one Solana slot later than what's shown here.</dd>
+      <dt>Read ≤<span class="kind">upper bound</span></dt>
+      <dd>Derived as Total minus Write, not measured directly. Because Write is a lower bound, Read is correspondingly an upper bound by the same margin -- an understated Write overstates Read.</dd>
+      
+      <dt>Write est. ≈<span class="kind">refined estimate</span></dt>
+      <dd>The same Write quantity above, refined using the transfer's own real Agave <code>tx.index</code> -- its ordinal position among every transaction in that slot's block (<code>tx_index</code> out of <code>slot_max_tx_index</code>) -- to estimate roughly how far into the slot it actually executed, rather than anchoring to the slot's start. Tighter than the plain bound wherever it resolves, but still an estimate: block execution isn't perfectly evenly spaced across a slot's real wall-clock time.</dd>
+      <dt>Read est. ≈<span class="kind">refined estimate</span></dt>
+      <dd>Total minus Write est. -- the same refinement applied to Read.</dd>
+      
+    </dl>
+    <p>Treat single-sample Write/Read splits as directional, not exact -- the <strong>est.</strong> columns (highlighted below, alongside Total) are the more trustworthy figures wherever they resolve.</p>
+  </div>
+  
+
+  
+  <div class="stats">
+    <div class="stat">
+      <div class="label">Write estimate</div>
+      <div class="value">n=18 · p50 184.92ms · p99 290.38ms</div>
+    </div>
+    <div class="stat">
+      <div class="label">Read estimate</div>
+      <div class="value">n=18 · p50 271.75ms · p99 389.98ms</div>
+    </div>
+  </div>
+  
+
+  <div class="stats">
+    
+    <div class="stat">
+      <div class="label">Astralane bundled</div>
+      <div class="value">20 / 20</div>
+    </div>
+    
+    
+    <div class="stat LowLatency">
+      <div class="label">LowLatency</div>
+      <div class="value">n=20 · p50 443.40ms · p99 586.13ms</div>
+    </div>
+    
+    <div class="stat Commit">
+      <div class="label">Commit</div>
+      <div class="value">n=0 · p50 0µs · p99 0µs</div>
+    </div>
+    
+    <div class="stat Transaction">
+      <div class="label">Transaction</div>
+      <div class="value">n=0 · p50 0µs · p99 0µs</div>
+    </div>
+    
+    
+    <div class="stat">
+      <div class="label">Write delay (lower bound)</div>
+      <div class="value">n=20 · p50 153.96ms · p99 290.00ms</div>
+    </div>
+    <div class="stat">
+      <div class="label">Read delay (upper bound)</div>
+      <div class="value">n=20 · p50 285.00ms · p99 410.57ms</div>
+    </div>
+    
+  </div>
+
+  <div class="hint">Click a column header to sort. Highlighted columns (est. and Total) are the ones worth trusting most.</div>
+
+  <div class="table-wrap">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th data-type="num">#</th>
+          <th data-type="str">Lane</th>
+          
+          <th data-type="str">Route</th>
+          
+          
+          <th data-type="num">Send Slot</th>
+          <th data-type="num">Inclusion Slot</th>
+          <th data-type="num">Slots</th>
+          <th data-type="num">Write ≥</th>
+          <th data-type="num">Read ≤</th>
+          
+          
+          <th data-type="num">tx.index</th>
+          <th data-type="num" class="highlight">Write est. ≈</th>
+          <th data-type="num" class="highlight">Read est. ≈</th>
+          
+          <th data-type="num" class="highlight">Total =</th>
+          <th data-type="str">Signature</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td>1</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058568</td>
+          <td>449058570</td>
+          <td>2</td>
+          <td data-sort="237655">237.66ms</td>
+          <td data-sort="268933">268.93ms</td>
+          
+          
+          <td>205/1210</td>
+          <td class="highlight" data-sort="253351">253.35ms</td>
+          <td class="highlight" data-sort="253237">253.24ms</td>
+          
+          <td class="highlight" data-sort="506589">506.59ms</td>
+          <td>4iXs8JdKUFv5bpZsE2V5v5jW6Cnv6c71iGD22Yb7UHCa5K3Y2XwwtHB3eQ3yT7KQrQcuzzfif4Yb26QHb1rnLcji</td>
+        </tr>
+        
+        <tr>
+          <td>2</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058570</td>
+          <td>449058572</td>
+          <td>2</td>
+          <td data-sort="236551">236.55ms</td>
+          <td data-sort="284810">284.81ms</td>
+          
+          
+          <td>101/1137</td>
+          <td class="highlight" data-sort="242889">242.89ms</td>
+          <td class="highlight" data-sort="278472">278.47ms</td>
+          
+          <td class="highlight" data-sort="521361">521.36ms</td>
+          <td>7h2DVCtDjWpi8SYoVx8BFnFzC61xEPkv3tfx3XfLXbN6dV8xSxiN2Pb9wzT6KYiqeNn7BZfNbmuryfYCnKqdJXw</td>
+        </tr>
+        
+        <tr>
+          <td>3</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058573</td>
+          <td>449058573</td>
+          <td>0</td>
+          <td data-sort="1371">1.37ms</td>
+          <td data-sort="197432">197.43ms</td>
+          
+          
+          <td>1070/1234</td>
+          <td class="highlight" data-sort="1373">1.37ms</td>
+          <td class="highlight" data-sort="197430">197.43ms</td>
+          
+          <td class="highlight" data-sort="198803">198.80ms</td>
+          <td>4CsPecM4UfAnc2bM3yxhMmmW8aFTsVHmekFMg1Cf563uG1hh7Eb7hEE4zxLZVNTVmD5hKyhxyz6ASfBsrLAtaYid</td>
+        </tr>
+        
+        <tr>
+          <td>4</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058573</td>
+          <td>449058574</td>
+          <td>1</td>
+          <td data-sort="2914">2.91ms</td>
+          <td data-sort="393342">393.34ms</td>
+          
+          
+          <td>892/1156</td>
+          <td class="highlight" data-sort="124506">124.51ms</td>
+          <td class="highlight" data-sort="271751">271.75ms</td>
+          
+          <td class="highlight" data-sort="396257">396.26ms</td>
+          <td>2VGueGWsdeRG3F5ZHZYgrrGkcVmoKAceWXWKv6kWZaVvsRKvuob4wFmPiETT9AJBzbaCF9EHKMgCfpxf5u3vk2jK</td>
+        </tr>
+        
+        <tr>
+          <td>5</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058575</td>
+          <td>449058576</td>
+          <td>1</td>
+          <td data-sort="158396">158.40ms</td>
+          <td data-sort="285004">285.00ms</td>
+          
+          
+          <td>206/1550</td>
+          <td class="highlight" data-sort="170111">170.11ms</td>
+          <td class="highlight" data-sort="273289">273.29ms</td>
+          
+          <td class="highlight" data-sort="443400">443.40ms</td>
+          <td>2wRH4NTWqP3nTFRAdLFitrpmLKDvfK1ZFFM4Uv8ixjUTRLY2GNvRxf4t83RepKbM1AGotZ5dPUaeXL5ssiwJxDWd</td>
+        </tr>
+        
+        <tr>
+          <td>6</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058576</td>
+          <td>449058577</td>
+          <td>1</td>
+          <td data-sort="5655">5.66ms</td>
+          <td data-sort="340874">340.87ms</td>
+          
+          
+          <td>649/692</td>
+          <td class="highlight" data-sort="191938">191.94ms</td>
+          <td class="highlight" data-sort="154591">154.59ms</td>
+          
+          <td class="highlight" data-sort="346530">346.53ms</td>
+          <td>3EEVxWKVQniChGh4Sa2DjTnoxUcwWC2gdCKPKdN7mPgeh8vB5x3rB4qZgsDMjZbwSNt3CHujAa1TWxVFFpmpsdcE</td>
+        </tr>
+        
+        <tr>
+          <td>7</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058577</td>
+          <td>449058579</td>
+          <td>2</td>
+          <td data-sort="171535">171.53ms</td>
+          <td data-sort="414597">414.60ms</td>
+          
+          
+          <td>142/971</td>
+          <td class="highlight" data-sort="201225">201.22ms</td>
+          <td class="highlight" data-sort="384907">384.91ms</td>
+          
+          <td class="highlight" data-sort="586132">586.13ms</td>
+          <td>2u4n5Hywfazq7ktqLCD2srmg58Sx9yTK1Xch7qPL9KVAvXcNdVhZT5L11GU5AnobXvHyxeZnZUmX5YeHvra6ppFy</td>
+        </tr>
+        
+        <tr>
+          <td>8</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058579</td>
+          <td>449058581</td>
+          <td>2</td>
+          <td data-sort="60">60µs</td>
+          <td data-sort="410575">410.57ms</td>
+          
+          
+          <td>247/635</td>
+          <td class="highlight" data-sort="6316">6.32ms</td>
+          <td class="highlight" data-sort="404320">404.32ms</td>
+          
+          <td class="highlight" data-sort="410636">410.64ms</td>
+          <td>3HNTPmE7dXmc4xTkB9b4kLyzzrQEnHgPbKedvxQnDRs95ZD8hb79fFVmFiT9xYFAcwkb9owH2NaL2VgRfiWtyFSS</td>
+        </tr>
+        
+        <tr>
+          <td>9</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058581</td>
+          <td>449058583</td>
+          <td>2</td>
+          <td data-sort="174901">174.90ms</td>
+          <td data-sort="259291">259.29ms</td>
+          
+          
+          <td>17/709</td>
+          <td class="highlight" data-sort="175218">175.22ms</td>
+          <td class="highlight" data-sort="258974">258.97ms</td>
+          
+          <td class="highlight" data-sort="434193">434.19ms</td>
+          <td>4UchjSLjgYwrWPJVduwSE5uk2BwUkGwGJidJJuz1MHuG41mhrSq2Dtej5aBXSrqWgUihzfUHJgzqqaJcNdCzBDps</td>
+        </tr>
+        
+        <tr>
+          <td>10</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058583</td>
+          <td>449058584</td>
+          <td>1</td>
+          <td data-sort="144">144µs</td>
+          <td data-sort="188666">188.67ms</td>
+          
+          
+          <td>5/427</td>
+          <td class="highlight" data-sort="183">183µs</td>
+          <td class="highlight" data-sort="188626">188.63ms</td>
+          
+          <td class="highlight" data-sort="188810">188.81ms</td>
+          <td>2EdLTgTdYmVDMYhAyyDLPPEBttW2ouF8tbScFuiC1G8yCf8MBfCw1zCL67EiqVxTc4JNYt9e416EhrmVTxY6tx4w</td>
+        </tr>
+        
+        <tr>
+          <td>11</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058584</td>
+          <td>449058585</td>
+          <td>1</td>
+          <td data-sort="151381">151.38ms</td>
+          <td data-sort="391233">391.23ms</td>
+          
+          
+          <td>5/774</td>
+          <td class="highlight" data-sort="152637">152.64ms</td>
+          <td class="highlight" data-sort="389977">389.98ms</td>
+          
+          <td class="highlight" data-sort="542614">542.61ms</td>
+          <td>4DdzK8yzztnc5VuwLLciECtjTxX3r5E3ThLvBvrqVEeuiVLzE8hYsZ4WybGSGRW8xvUCB7L2dJFX7EcJXBi8TyoY</td>
+        </tr>
+        
+        <tr>
+          <td>12</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058585</td>
+          <td>449058587</td>
+          <td>2</td>
+          <td data-sort="290788">290.79ms</td>
+          <td data-sort="350193">350.19ms</td>
+          
+          
+          <td>0/567</td>
+          <td class="highlight" data-sort="290788">290.79ms</td>
+          <td class="highlight" data-sort="350193">350.19ms</td>
+          
+          <td class="highlight" data-sort="640982">640.98ms</td>
+          <td>5cnncgK5P4puBXqtHsaJ7KmqD9z9SttKGz4So9bsfSjC9MUrn7LVzBv3b7dGnpQTX9a4AtMyanfUrPyzte8K3iSD</td>
+        </tr>
+        
+        <tr>
+          <td>13</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058587</td>
+          <td>449058589</td>
+          <td>2</td>
+          <td data-sort="153963">153.96ms</td>
+          <td data-sort="133279">133.28ms</td>
+          
+          
+          <td><span class="unresolved">unresolved</span></td>
+          <td class="highlight" data-sort="-1"><span class="unresolved">—</span></td>
+          <td class="highlight" data-sort="-1"><span class="unresolved">—</span></td>
+          
+          <td class="highlight" data-sort="287242">287.24ms</td>
+          <td>5w2hFW2CxqSczVDhBxbq7PEQcXBv9Lz6qesVi1tzkzWP9WvRs1eRDydvwmnL1pqj3GLzx6BxfXGepWkGCgpgM1px</td>
+        </tr>
+        
+        <tr>
+          <td>14</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058589</td>
+          <td>449058590</td>
+          <td>1</td>
+          <td data-sort="138506">138.51ms</td>
+          <td data-sort="343444">343.44ms</td>
+          
+          
+          <td>620/1172</td>
+          <td class="highlight" data-sort="218262">218.26ms</td>
+          <td class="highlight" data-sort="263688">263.69ms</td>
+          
+          <td class="highlight" data-sort="481950">481.95ms</td>
+          <td>Q4VnkWJhW21xER3RJk9Jf61iAzdPZ92GK9eQxwrQHcT9sNkFrAGN5jE64uASGfqApBm9D1he1LVXYntCGFB1TbC</td>
+        </tr>
+        
+        <tr>
+          <td>15</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058590</td>
+          <td>449058592</td>
+          <td>2</td>
+          <td data-sort="260463">260.46ms</td>
+          <td data-sort="242705">242.71ms</td>
+          
+          
+          <td>4/407</td>
+          <td class="highlight" data-sort="260648">260.65ms</td>
+          <td class="highlight" data-sort="242519">242.52ms</td>
+          
+          <td class="highlight" data-sort="503168">503.17ms</td>
+          <td>4pVyHhAxCyQbxvX7ne7m8MXPUue6ax22t8xumUGTHWaR1SiWDa25rDnfyHtNzzqhkcTstuu6dWwktjmHd7wA2FEe</td>
+        </tr>
+        
+        <tr>
+          <td>16</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058593</td>
+          <td>449058594</td>
+          <td>1</td>
+          <td data-sort="184197">184.20ms</td>
+          <td data-sort="279270">279.27ms</td>
+          
+          
+          <td>4/463</td>
+          <td class="highlight" data-sort="184923">184.92ms</td>
+          <td class="highlight" data-sort="278544">278.54ms</td>
+          
+          <td class="highlight" data-sort="463468">463.47ms</td>
+          <td>KeoPgX1mzYfM7ytxHzLHVWEi9UC1t7HLskamskCzwnp9Zcoc8GTU7LSj2dnY4aMekoM7nCsE8PiLHRWwPUdBNyq</td>
+        </tr>
+        
+        <tr>
+          <td>17</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058594</td>
+          <td>449058596</td>
+          <td>2</td>
+          <td data-sort="289995">290.00ms</td>
+          <td data-sort="289493">289.49ms</td>
+          
+          
+          <td>81/1436</td>
+          <td class="highlight" data-sort="290384">290.38ms</td>
+          <td class="highlight" data-sort="289104">289.10ms</td>
+          
+          <td class="highlight" data-sort="579489">579.49ms</td>
+          <td>2S6khD2NL3RhDhuaV4Ujw5NV2xqfvVfKoBfGGF6Zwx2jDQgNdSoWg861eKnVb9h1zdNkZMjUUMk7aGDTs4ErGyNd</td>
+        </tr>
+        
+        <tr>
+          <td>18</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058596</td>
+          <td>449058597</td>
+          <td>1</td>
+          <td data-sort="701">701µs</td>
+          <td data-sort="317964">317.96ms</td>
+          
+          
+          <td>1100/1116</td>
+          <td class="highlight" data-sort="38094">38.09ms</td>
+          <td class="highlight" data-sort="280571">280.57ms</td>
+          
+          <td class="highlight" data-sort="318666">318.67ms</td>
+          <td>36yiSSpEGND7J4ND6aKozBKQCiZHVJifcHymh4NNMfvpdbAu5V4HbSzZ7HeSyMZ9Xff1ATE5XxNQRAREsqDDZEkp</td>
+        </tr>
+        
+        <tr>
+          <td>19</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058598</td>
+          <td>449058599</td>
+          <td>1</td>
+          <td data-sort="198477">198.48ms</td>
+          <td data-sort="250313">250.31ms</td>
+          
+          
+          <td>130/1178</td>
+          <td class="highlight" data-sort="203040">203.04ms</td>
+          <td class="highlight" data-sort="245749">245.75ms</td>
+          
+          <td class="highlight" data-sort="448790">448.79ms</td>
+          <td>41Bhx5aE69RzUN9e8sCGBs3pEoQfV9Xc5PwJPnP5SR5kEFte9wzfqqVKFhgK5DD5i3RAsXVZ71C2we6Hr7o2K4TR</td>
+        </tr>
+        
+        <tr>
+          <td>20</td>
+          <td><span class="lane-badge LowLatency">LowLatency</span></td>
+          
+          <td><span class="route-badge astralane">⚡ Astralane</span></td>
+          
+          
+          <td>449058600</td>
+          <td>449058600</td>
+          <td>0</td>
+          <td data-sort="99">99µs</td>
+          <td data-sort="339407">339.41ms</td>
+          
+          
+          <td><span class="unresolved">unresolved</span></td>
+          <td class="highlight" data-sort="-1"><span class="unresolved">—</span></td>
+          <td class="highlight" data-sort="-1"><span class="unresolved">—</span></td>
+          
+          <td class="highlight" data-sort="339507">339.51ms</td>
+          <td>5evuew5cDpyuvQqfutG9iHMpohUVgUN54TqNV9LG53jGqvY63VXuy7ypcSTNvjm1owazFfKPe3GYTHDyhgSuqGX7</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h2>Latency floor and assumptions</h2>
+    <p>Two structural facts about this specific deployment set the floor under every number above:</p>
+    <p><strong>This validator is unstaked.</strong> Solana's networking layer uses stake-weighted quality-of-service in both directions: a leader's QUIC connections favor higher-staked peers when accepting transactions under load, and a node's position in the stake-weighted Turbine tree governs how quickly it receives a new block's shreds via gossip and repair. With zero stake, this validator gets no priority TPU connection for sending and no shortened propagation path for receiving -- it's served after every higher-stake participant on the network, not because of anything about the transaction itself. That's the real cause behind the write/read split above: this guest is timing not just when a transfer landed, but when <em>this specific, unprivileged validator</em> found out about it.</p>
+    <p><strong>Solana's own block cadence sets a hard floor regardless of stake.</strong> A transaction can only land once a leader actually produces a block containing it (~400ms slots), and this guest can only observe that landing once the resulting shreds physically propagate across the network to it. Neither step can be instantaneous for any validator, staked or not -- lack of stake only adds delay on top of that floor, it doesn't create it.</p>
+    
+    <p><strong>This is also why the test routes transfers through Astralane.</strong> Precisely because this validator has no stake-weighted advantage of its own, a plain, unassisted transaction sent directly from it competes for a leader's attention on equal footing with every other unstaked sender -- no priority, and easily deprioritized or dropped outright under any real load. Astralane is a third-party bundler/relay that maintains its own direct routes to leaders and lands transactions against a paid tip rather than against stake, so paying that tip buys back the same kind of priority a well-staked validator already gets for free (see the Route column above). It isn't chasing speed for its own sake -- it's compensating for the exact structural disadvantage described above.</p>
+    
+  </div>
+
+  <footer>generated by <code>optimizer latencyreport</code></footer>
+</div>
+<script>
+  (function () {
+    const table = document.getElementById('tbl');
+    const tbody = table.tBodies[0];
+    const ths = Array.from(table.tHead.rows[0].cells);
+    let sortCol = -1, sortAsc = true;
+    ths.forEach((th, i) => {
+      th.addEventListener('click', () => {
+        const rows = Array.from(tbody.rows);
+        const type = th.dataset.type;
+        sortAsc = sortCol === i ? !sortAsc : true;
+        sortCol = i;
+        rows.sort((a, b) => {
+          
+          
+          
+          
+          
+          
+          
+          const aSort = a.cells[i].dataset.sort;
+          const bSort = b.cells[i].dataset.sort;
+          if (type === 'num' && aSort !== undefined && bSort !== undefined) {
+            return sortAsc ? aSort - bSort : bSort - aSort;
+          }
+          let x = a.cells[i].innerText.trim();
+          let y = b.cells[i].innerText.trim();
+          if (type === 'num') {
+            x = parseFloat(x.replace(/[^0-9.-]/g, '')) || 0;
+            y = parseFloat(y.replace(/[^0-9.-]/g, '')) || 0;
+            return sortAsc ? x - y : y - x;
+          }
+          return sortAsc ? x.localeCompare(y) : y.localeCompare(x);
+        });
+        rows.forEach(r => tbody.appendChild(r));
+        ths.forEach(h => { h.classList.remove('sorted'); h.removeAttribute('data-dir'); });
+        th.classList.add('sorted');
+        th.setAttribute('data-dir', sortAsc ? '▲' : '▼');
+      });
+    });
+  })();
+</script>
+</body>
+</html>

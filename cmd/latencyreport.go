@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
@@ -13,29 +14,42 @@ import (
 	"time"
 )
 
-// LatencyReportCmd turns a native-transfer latency run's log output
+// defaultReportDir is where a report lands when --out isn't given --
+// keeps every run's report in one place instead of scattered wherever the
+// log file happened to be.
+const defaultReportDir = "latency-reports"
+
+// LatencyReportCmd turns a native-transfer latency run's own log output
 // into a real HTML report and (best-effort) opens it in the default
-// browser. Works against either testlatencylite's own log lines or the
-// fuller internal testperplatencyv1lite format it was modeled on (see
+// browser. Works against either testlatencylitev1's own log lines or the
+// fuller internal testlatencylitev1 format it was modeled on (see
 // the regexes below) -- whichever fields a given line actually has.
 //
 // Deliberately reads the log file rather than any structured wire
-// message -- testlatencylite has no outbound custom-message protocol at
-// all (see catscope-rust-bot's testlatencylite::message module doc
+// message -- testlatencylitev1 has no outbound custom-message protocol at
+// all (see catscope-rust-bot's testlatencylitev1::message module doc
 // comment); every result is a plain log line. Recomputes n/p50/p99
 // itself from the parsed per-transfer samples rather than trusting the
 // bot's own separately-logged summary lines, so it stays correct even if
 // a run gets killed before that summary ever prints.
 type LatencyReportCmd struct {
 	LogFile string `arg:"log-file" help:"path to a native-transfer latency run's log output (stdout+stderr, redirected to a file when the run was started)"`
-	Out     string `option:"out" help:"output HTML path (default: <log-file>.html)"`
+	Out     string `option:"out" help:"output HTML path (default: latency-reports/<log-file-basename>.html)"`
 	NoOpen  bool   `option:"no-open" help:"don't try to open the report in a browser"`
+	// Report renders the exact same page minus the trailing "Latency
+	// floor and assumptions" section -- that section's own explanation
+	// (unstaked-validator QoS, Astralane rationale) is specific to this
+	// deployment and won't hold for every run/validator this tool sees,
+	// so this flag lets a caller who doesn't want that fixed narrative
+	// attached skip it. Nothing else about the output changes -- still a
+	// normal file, saved the same way as any other report.
+	Report bool `option:"report" help:"omit the trailing 'Latency floor and assumptions' section (its explanation is specific to this deployment, not every run)"`
 }
 
 // Each per-transfer line is parsed field-by-field with its own small,
 // independent regex rather than one giant one -- the richer internal
 // format logs several extra fields (send_slot=/inclusion_slot=/slots=/
-// write=/read=) that testlatencylite's own leaner lines don't have, and
+// write=/read=) that testlatencylitev1's own leaner lines don't have, and
 // some of those fields can themselves read "unknown" or
 // "unknown (<=Nµs)" instead of a number (a same-slot sample with no
 // resolvable split -- see the real module's own doc comment on
@@ -246,7 +260,10 @@ func (r *LatencyReportCmd) Run(rc *RunConfig) error {
 
 	out := r.Out
 	if len(out) == 0 {
-		out = r.LogFile + ".html"
+		if err := os.MkdirAll(defaultReportDir, 0o755); err != nil {
+			return fmt.Errorf("failed to create %s: %s", defaultReportDir, err)
+		}
+		out = filepath.Join(defaultReportDir, filepath.Base(r.LogFile)+".html")
 	}
 	data := reportData{
 		Title:         fmt.Sprintf("Native transfer latency run — %d/%d", len(allRows), len(allRows)),
@@ -268,9 +285,10 @@ func (r *LatencyReportCmd) Run(rc *RunConfig) error {
 		ReadEstN:      ren,
 		ReadEstP50Us:  rep50,
 		ReadEstP99Us:  rep99,
-		AnyAstralane:  anyAstralane,
-		AstralaneN:    astralaneN,
-		AstralaneOf:   len(allRows),
+		AnyAstralane:    anyAstralane,
+		AstralaneN:      astralaneN,
+		AstralaneOf:     len(allRows),
+		ShowAssumptions: !r.Report,
 	}
 	outFile, err := os.Create(out)
 	if err != nil {
@@ -291,7 +309,7 @@ func (r *LatencyReportCmd) Run(rc *RunConfig) error {
 
 // optionalUintField returns the field's value as a display string, or ""
 // if the line doesn't carry that field at all (either genuinely absent --
-// testlatencylite's own leaner lines -- or logged as "unknown"/
+// testlatencylitev1's own leaner lines -- or logged as "unknown"/
 // "unknown (<=Nµs)" for a same-slot sample the source module itself
 // couldn't resolve).
 func optionalUintField(re *regexp.Regexp, line string) string {
@@ -381,7 +399,7 @@ type reportRow struct {
 	ReadUs   string
 	// HasDetail is true when this line carries the fuller field set
 	// (send_slot=/inclusion_slot=/etc) -- gates whether the report shows
-	// those extra columns at all, since a pure testlatencylite run never
+	// those extra columns at all, since a pure testlatencylitev1 run never
 	// has them.
 	HasDetail bool
 	// The tx.index-based estimate (see reTxEstHeader's own doc comment) --
@@ -441,6 +459,10 @@ type reportData struct {
 	AnyAstralane bool
 	AstralaneN   int
 	AstralaneOf  int
+	// ShowAssumptions gates the trailing "Latency floor and assumptions"
+	// section -- see LatencyReportCmd.Report's own doc comment for why a
+	// caller would want to omit it.
+	ShowAssumptions bool
 }
 
 // reportTemplate carries over the established visual pattern from the
@@ -670,6 +692,18 @@ var reportTemplate = template.Must(template.New("report").Funcs(latencyFuncs).Pa
       </tbody>
     </table>
   </div>
+
+  {{if .ShowAssumptions}}
+  <div class="prose">
+    <h2>Latency floor and assumptions</h2>
+    <p>Two structural facts can set the floor under every number above, depending on how and where this was run:</p>
+    <p><strong>If this was run using a non-voting/unstaked Catscope validator, note that</strong> Solana's networking layer uses stake-weighted quality-of-service in both directions: a leader's QUIC connections favor higher-staked peers when accepting transactions under load, and a node's position in the stake-weighted Turbine tree governs how quickly it receives a new block's shreds via gossip and repair. With zero stake, an unstaked validator gets no priority TPU connection for sending and no shortened propagation path for receiving -- it's served after every higher-stake participant on the network, not because of anything about the transaction itself. That would be the real cause behind the write/read split above: the guest is timing not just when a transfer landed, but when <em>this specific validator</em> found out about it.</p>
+    <p><strong>Solana's own block cadence sets a hard floor regardless of stake.</strong> A transaction can only land once a leader actually produces a block containing it (~400ms slots), and this guest can only observe that landing once the resulting shreds physically propagate across the network to it. Neither step can be instantaneous for any validator, staked or not -- lack of stake only adds delay on top of that floor, it doesn't create it.</p>
+    {{if .AnyAstralane}}
+    <p><strong>This is also why a run like this typically routes transfers through Astralane.</strong> On a validator with no stake-weighted advantage of its own, a plain, unassisted transaction sent directly from it competes for a leader's attention on equal footing with every other unstaked sender -- no priority, and easily deprioritized or dropped outright under any real load. Astralane is a third-party bundler/relay that maintains its own direct routes to leaders and lands transactions against a paid tip rather than against stake, so paying that tip buys back the same kind of priority a well-staked validator already gets for free (see the Route column above). It isn't chasing speed for its own sake -- it's compensating for that same structural disadvantage when it applies.</p>
+    {{end}}
+  </div>
+  {{end}}
 
   <footer>generated by <code>optimizer latencyreport</code></footer>
 </div>

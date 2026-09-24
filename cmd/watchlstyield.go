@@ -7,9 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"git.noncepad.com/pkg/bot/state"
-	"git.noncepad.com/pkg/optimizer/chainstate"
 	lstyield "git.noncepad.com/pkg/optimizer/prefetch/lst-yield"
+	"git.noncepad.com/pkg/optimizer/store"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	sgo "github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
@@ -39,12 +38,12 @@ func (r *WatchLstYieldCmd) Run(rc *RunConfig) error {
 
 	rpcClient := rpc.New(r.RPCURL)
 
-	chainState, err := chainstate.Create(ctx, getDBFilePath(), state.Client{})
+	prefetchDB, err := store.Open(getDBFilePath())
 	if err != nil {
 		return fmt.Errorf("failed to open prefetch db: %s", err)
 	}
 	defer func() {
-		_ = chainState.Close()
+		_ = prefetchDB.Close()
 	}()
 
 	entry := logger.FromContext(ctx)
@@ -53,7 +52,7 @@ func (r *WatchLstYieldCmd) Run(rc *RunConfig) error {
 	ticker := time.NewTicker(r.PollInterval)
 	defer ticker.Stop()
 	for {
-		pollLstYieldOnce(ctx, rpcClient, chainState.Database().Raw(), entry)
+		pollLstYieldOnce(ctx, rpcClient, prefetchDB.Raw(), entry)
 		select {
 		case <-ctx.Done():
 			return context.Cause(ctx)
