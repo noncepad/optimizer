@@ -31,7 +31,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/util"
 	"git.noncepad.com/pkg/solpipe-util/graph"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 type eventHook struct {

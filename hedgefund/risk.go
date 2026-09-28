@@ -24,12 +24,12 @@ import (
 	"fmt"
 
 	"git.noncepad.com/pkg/bot/state"
-	"git.noncepad.com/pkg/optimizer/harness"
+	harness "git.noncepad.com/pkg/optimizer/api"
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/flow/agent/react"
 	"github.com/cloudwego/eino/schema"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // riskPersona is the risk agent's role -- deliberately narrow: assess and

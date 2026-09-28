@@ -3,7 +3,7 @@ package brain
 import (
 	"encoding/binary"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // ChildID builds an sgo.PublicKey-shaped id from a plain uint32 index --

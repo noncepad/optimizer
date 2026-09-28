@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"git.noncepad.com/pkg/optimizer/portfolio"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 func f64(v float64) *float64 { return &v }

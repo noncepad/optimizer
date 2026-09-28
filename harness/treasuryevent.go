@@ -7,8 +7,8 @@ import (
 	solpipe_treasury "git.noncepad.com/pkg/safejar"
 	solpipe_cba "git.noncepad.com/pkg/solpipe"
 	"git.noncepad.com/pkg/solpipe-util/graph"
-	sgo "github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/programs/token"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/programs/token"
 )
 
 type treasuryHook struct {

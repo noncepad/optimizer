@@ -112,8 +112,8 @@ package multimodelv1
 import (
 	"fmt"
 
-	sgo "github.com/gagliardetto/solana-go"
 	"github.com/noncepad/catmsg"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 const (

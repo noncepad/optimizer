@@ -5,7 +5,7 @@ import (
 
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/bidder"
 	"git.noncepad.com/pkg/optimizer/util"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 type BalanceCmd struct {

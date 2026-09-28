@@ -9,7 +9,7 @@ import (
 
 	mgrbot "git.noncepad.com/pkg/bot/catscope"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // UploadRequest describes one bot image to upload and run. Submit via

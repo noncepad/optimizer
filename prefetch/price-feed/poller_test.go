@@ -7,7 +7,7 @@ import (
 	"time"
 
 	pricefeed "git.noncepad.com/pkg/optimizer/prefetch/price-feed"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 	"github.com/joho/godotenv"
 )
 

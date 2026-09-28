@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // accountUsageEntrySize is the on-wire size of one (pubkey, count) entry

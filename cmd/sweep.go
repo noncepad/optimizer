@@ -7,7 +7,7 @@ import (
 
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/bidder"
 	harness "git.noncepad.com/pkg/optimizer/harness"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // SweepCmd sweeps a child wallet's SOL and SPL token balances back to

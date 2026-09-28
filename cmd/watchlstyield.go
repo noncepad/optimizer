@@ -10,8 +10,8 @@ import (
 	lstyield "git.noncepad.com/pkg/optimizer/prefetch/lst-yield"
 	"git.noncepad.com/pkg/optimizer/store"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/rpc"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 )
 
 // WatchLstYieldCmd samples every real candidate LST's SOL-per-LST exchange

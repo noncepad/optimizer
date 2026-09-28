@@ -1,7 +1,7 @@
 package solend
 
 import (
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Solend Reserve/LendingMarket account offsets. Unlike the Anchor programs

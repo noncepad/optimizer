@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // OpenBook/Serum MarketState account layout: 5-byte header padding ("serum"),

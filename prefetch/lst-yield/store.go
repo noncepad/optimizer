@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"time"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // KnownLST identifies one tracked liquid-staking token by a real, verified

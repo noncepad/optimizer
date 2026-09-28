@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 func testPubkey(b byte) sgo.PublicKey {

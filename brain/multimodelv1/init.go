@@ -13,7 +13,7 @@ import (
 	"git.noncepad.com/pkg/bot/txbuilder"
 	"git.noncepad.com/pkg/solpipe-util/graph"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Init is where we set a Pipeline allocation. Identical shape to

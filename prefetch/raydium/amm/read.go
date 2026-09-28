@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // PoolRow is a flat view of an AMM v4 pool. CoinMint/PcMint (and thus a spot

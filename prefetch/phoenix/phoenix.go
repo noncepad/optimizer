@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"git.noncepad.com/pkg/bot/state"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 var ProgramID = sgo.MustPublicKeyFromBase58("EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih")

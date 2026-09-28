@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"git.noncepad.com/pkg/solpipe-util/graph"
-	sgo "github.com/gagliardetto/solana-go"
 	"github.com/noncepad/catmsg"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // KeyFlagBundlerTipUpdate is the shared, cross-strategy stdin key flag

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // marketCount returns how many markets are already persisted, so Create

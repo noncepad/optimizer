@@ -3,7 +3,7 @@ package pumpswap
 import (
 	"fmt"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Pool account layout, verified against pump.fun's own published IDL

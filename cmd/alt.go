@@ -8,9 +8,9 @@ import (
 
 	"git.noncepad.com/pkg/optimizer/prefetch/alt"
 	"git.noncepad.com/pkg/optimizer/store"
-	sgo "github.com/gagliardetto/solana-go"
-	addresslookuptable "github.com/gagliardetto/solana-go/programs/address-lookup-table"
-	"github.com/gagliardetto/solana-go/rpc"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	addresslookuptable "github.com/solana-foundation/solana-go/v2/programs/address-lookup-table"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 )
 
 // extendBatchSize is a conservative number of addresses per

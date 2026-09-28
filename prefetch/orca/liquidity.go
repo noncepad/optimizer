@@ -4,7 +4,7 @@ import (
 	"math"
 	"math/big"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // LiquidityUsd returns a rough USD estimate of active liquidity using virtual

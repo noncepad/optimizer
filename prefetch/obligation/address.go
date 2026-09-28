@@ -5,7 +5,7 @@ import (
 
 	"git.noncepad.com/pkg/optimizer/prefetch/kamino"
 	"git.noncepad.com/pkg/optimizer/prefetch/solend"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // KaminoMainMarket is the single lending market every multimodelv1 trade

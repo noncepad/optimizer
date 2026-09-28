@@ -1,7 +1,7 @@
 package kamino
 
 import (
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Kamino Lending reserve account offsets (Anchor, 8-byte discriminator prepended).

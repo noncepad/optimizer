@@ -26,10 +26,10 @@ import (
 	"strings"
 	"time"
 
-	"git.noncepad.com/pkg/optimizer/harness"
+	harness "git.noncepad.com/pkg/optimizer/api"
 	"git.noncepad.com/pkg/optimizer/store"
 	"github.com/cloudwego/eino-ext/components/model/ollama"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 func main() {

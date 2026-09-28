@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // PoolJSON is one pumpswap_pool row, JSON-shaped for catscope-rust-bot's

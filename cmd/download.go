@@ -26,7 +26,9 @@ import (
 	"git.noncepad.com/pkg/optimizer/prefetch/sanctum"
 	"git.noncepad.com/pkg/optimizer/prefetch/solend"
 	"git.noncepad.com/pkg/optimizer/store"
-	sgo "github.com/gagliardetto/solana-go"
+	"git.noncepad.com/pkg/solpipe-util/logger"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 )
 
 type DownloadArbCmd struct {
@@ -35,6 +37,12 @@ type DownloadArbCmd struct {
 	WorkingDir string `option:"work" help:"working directory"`
 	Exact      string `option:"exact" help:"write comma delimited list of dex data to download"`
 	Force      bool   `option:"force" help:"re-fetch all dex data even if prefetch.db is already populated"`
+	// RPCURL backs kamino.CreateXstocksObligations only -- that scan is a
+	// raw getProgramAccounts call, not a Catscope graph walk like every
+	// other table this command populates (see xstocks_obligation.go's own
+	// doc comment for why), so it needs a real Solana RPC endpoint of its
+	// own rather than the state client the rest of this command uses.
+	RPCURL string `option:"rpc-url" default:"https://api.mainnet-beta.solana.com" help:"Solana RPC endpoint for the Kamino xStocks obligation scan"`
 }
 
 var defaultDownloadList = []string{
@@ -184,6 +192,28 @@ func (r *DownloadArbCmd) Run(rc *RunConfig) error {
 					_, err2 := kamino.Create(ctx, stateClient, prefetchDB.DB(), r.Force)
 					if err2 != nil {
 						err2 = fmt.Errorf("failed to get kamino: %s", err2)
+					}
+					capC <- struct{}{}
+					errorC <- err2
+				}
+			})
+			n++
+			// Kamino xStocks obligation discovery -- deliberately its own
+			// wg.Go/capC slot, not folded into the reserve fetch above: a
+			// raw RPC scan via rpcClient, not the graph walk via
+			// stateClient every other branch here uses. See
+			// xstocks_obligation.go's own doc comment.
+			wg.Go(func() {
+				select {
+				case <-ctx.Done():
+				case <-capC:
+					rpcClient := rpc.New(r.RPCURL)
+					obligations, err2 := kamino.CreateXstocksObligations(ctx, rpcClient, prefetchDB.DB(), r.Force)
+					if err2 != nil {
+						err2 = fmt.Errorf("failed to get kamino xstocks obligations: %s", err2)
+					} else {
+						entry := logger.FromContext(ctx)
+						entry.Info(fmt.Sprintf("kamino: found %d xstocks obligations with a real position", len(obligations)))
 					}
 					capC <- struct{}{}
 					errorC <- err2

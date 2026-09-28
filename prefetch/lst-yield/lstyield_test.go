@@ -7,7 +7,7 @@ import (
 	"time"
 
 	lstyield "git.noncepad.com/pkg/optimizer/prefetch/lst-yield"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 	_ "modernc.org/sqlite"
 )
 

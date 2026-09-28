@@ -12,7 +12,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/prefetch/mintinfo"
 	"git.noncepad.com/pkg/optimizer/prefetch/orca"
 	"git.noncepad.com/pkg/optimizer/store"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 func TestPool(t *testing.T) {

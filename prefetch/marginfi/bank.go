@@ -1,7 +1,7 @@
 package marginfi
 
 import (
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // marginfi-v2 Bank account offsets (Anchor, 8-byte discriminator prepended).

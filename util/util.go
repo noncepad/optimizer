@@ -4,7 +4,7 @@ package util
 import (
 	"fmt"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 func ParsePubkey(data []byte) (sgo.PublicKey, error) {

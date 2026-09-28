@@ -12,7 +12,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/portfolio"
 	pricefeed "git.noncepad.com/pkg/optimizer/prefetch/price-feed"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // farFuture stands in for "no upper bound" on the bidder log query -- Log()

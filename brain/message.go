@@ -3,8 +3,8 @@ package brain
 import (
 	"fmt"
 
-	sgo "github.com/gagliardetto/solana-go"
 	"github.com/noncepad/catmsg"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // KeyFlagWallet is the one wire-protocol key flag every bot mode in

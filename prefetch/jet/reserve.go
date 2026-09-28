@@ -1,7 +1,7 @@
 package jet
 
 import (
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Jet Protocol V1 Reserve account offsets. No public IDL exists for this

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // BondingCurveJSON is one pumpfun_bonding_curve row, JSON-shaped for

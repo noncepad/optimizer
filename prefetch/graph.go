@@ -9,7 +9,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/prefetch/raydium/amm"
 	"git.noncepad.com/pkg/optimizer/prefetch/raydium/clmm"
 	"git.noncepad.com/pkg/optimizer/prefetch/raydium/cpmm"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Edge is one directed hop in a PriceGraph: crossing it converts 1 unit of

@@ -14,7 +14,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/util"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // wrappedSolMint is Jupiter's convention for "native SOL" as a priceable

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"git.noncepad.com/pkg/optimizer/portfolio"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // pnlMintRow is one mint's starting-vs-current mark-to-market row within

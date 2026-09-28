@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // LookupTableEntry is one address_lookup_table row, JSON-shaped for

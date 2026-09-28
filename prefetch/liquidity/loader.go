@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"git.noncepad.com/pkg/optimizer/prefetch/trading"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // routerJSON is the exact layout that build.rs RouterInput deserialises.

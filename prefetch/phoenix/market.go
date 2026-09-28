@@ -1,7 +1,7 @@
 package phoenix
 
 import (
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Market is one Phoenix perp market's identity -- just the fields

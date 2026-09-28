@@ -40,13 +40,27 @@ func newStore() *Store {
 }
 
 // update records a freshly parsed snapshot and appends this tick's
-// price/volatility onto each symbol's bounded history ring.
+// price/volatility onto each symbol's bounded history ring. Skips a
+// symbol entirely for this tick if it hasn't been priced yet (Prices[i]
+// <= 0 -- see MarketStatsSnapshot.Prices's own doc comment: 0.0 is the
+// wire protocol's "no live quote yet" sentinel, not a real price). Real,
+// live-observed bug this fixes: a symbol's very first snapshot or two,
+// pushed before its pool subscriptions finish warming up, carried this
+// 0.0 sentinel straight into priceHist -- a real, negative-looking price
+// that then sat in the bounded 120-point window (up to ~8-12 minutes on
+// every single restart) dragging PriceHistory's own min toward/through
+// zero, visibly corrupting the sparkline and the TA panel's Bollinger-
+// derived "low" axis label (see marketwatchchart.go's seriesRange) even
+// though every symbol was actually pricing correctly moments later.
 func (s *Store) update(snap MarketStatsSnapshot) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	s.latest = snap
 	s.haveOne = true
 	for i := 0; i < NSymbols; i++ {
+		if snap.Prices[i] <= 0 {
+			continue
+		}
 		s.priceHist[i] = appendBounded(s.priceHist[i], snap.Prices[i], historyLen)
 		s.volHist[i] = appendBounded(s.volHist[i], snap.Volatilities[i], historyLen)
 	}

@@ -195,6 +195,7 @@ func (pf *Prefetcher) Build(ctx context.Context, targetRepositoryPath string, li
 	}{
 		{"phoenix_market.json", func(p string) error { return phoenix.ExportJSON(rawDB, p) }},
 		{"kamino_reserve.json", func(p string) error { return kamino.ExportJSON(rawDB, p) }},
+		{"kamino_xstocks_obligation.json", func(p string) error { return kamino.ExportXstocksObligationsJSON(rawDB, p) }},
 		{"solend_reserve.json", func(p string) error { return solend.ExportJSON(rawDB, p) }},
 		{"drift_spot_market.json", func(p string) error { return drift.ExportJSON(rawDB, p) }},
 		{"jet_reserve.json", func(p string) error { return jet.ExportJSON(rawDB, p) }},

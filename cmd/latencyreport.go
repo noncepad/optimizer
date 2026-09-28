@@ -266,25 +266,25 @@ func (r *LatencyReportCmd) Run(rc *RunConfig) error {
 		out = filepath.Join(defaultReportDir, filepath.Base(r.LogFile)+".html")
 	}
 	data := reportData{
-		Title:         fmt.Sprintf("Native transfer latency run — %d/%d", len(allRows), len(allRows)),
-		Generated:     time.Now().Format(time.RFC1123),
-		LogFile:       r.LogFile,
-		Stats:         stats,
-		Rows:          allRows,
-		AnyDetail:     anyDetail,
-		WriteN:        wn,
-		WriteP50Us:    wp50,
-		WriteP99Us:    wp99,
-		ReadN:         rn,
-		ReadP50Us:     rp50,
-		ReadP99Us:     rp99,
-		AnyEstimate:   anyEstimate,
-		WriteEstN:     wen,
-		WriteEstP50Us: wep50,
-		WriteEstP99Us: wep99,
-		ReadEstN:      ren,
-		ReadEstP50Us:  rep50,
-		ReadEstP99Us:  rep99,
+		Title:           fmt.Sprintf("Native transfer latency run — %d/%d", len(allRows), len(allRows)),
+		Generated:       time.Now().Format(time.RFC1123),
+		LogFile:         r.LogFile,
+		Stats:           stats,
+		Rows:            allRows,
+		AnyDetail:       anyDetail,
+		WriteN:          wn,
+		WriteP50Us:      wp50,
+		WriteP99Us:      wp99,
+		ReadN:           rn,
+		ReadP50Us:       rp50,
+		ReadP99Us:       rp99,
+		AnyEstimate:     anyEstimate,
+		WriteEstN:       wen,
+		WriteEstP50Us:   wep50,
+		WriteEstP99Us:   wep99,
+		ReadEstN:        ren,
+		ReadEstP50Us:    rep50,
+		ReadEstP99Us:    rep99,
 		AnyAstralane:    anyAstralane,
 		AstralaneN:      astralaneN,
 		AstralaneOf:     len(allRows),
@@ -333,7 +333,7 @@ func extractResolved(rows []reportRow) (write, read []uint64) {
 			}
 		}
 	}
-	return
+	return write, read
 }
 
 func extractEstimates(rows []reportRow) (write, read []uint64) {
@@ -349,7 +349,7 @@ func extractEstimates(rows []reportRow) (write, read []uint64) {
 			}
 		}
 	}
-	return
+	return write, read
 }
 
 func percentilesUs(samples []laneSample) (n uint64, p50 uint64, p99 uint64) {
@@ -370,7 +370,7 @@ func percentilesRaw(vals []uint64) (n uint64, p50 uint64, p99 uint64) {
 	n = uint64(len(sorted))
 	p50 = sorted[(len(sorted)-1)*50/100]
 	p99 = sorted[(len(sorted)-1)*99/100]
-	return
+	return n, p50, p99
 }
 
 // openInBrowser best-effort opens `path` with the OS's default handler.

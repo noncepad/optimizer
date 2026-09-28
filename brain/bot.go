@@ -8,8 +8,8 @@ import (
 
 	mgrbot "git.noncepad.com/pkg/bot/catscope"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
 	"github.com/noncepad/catmsg"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // onceCloser makes Close idempotent. Real, live-hit reason this exists

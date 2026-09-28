@@ -1,7 +1,7 @@
 package drift
 
 import (
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Drift v2 SpotMarket account offsets (Anchor, zero_copy, 8-byte

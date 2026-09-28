@@ -9,8 +9,8 @@ import (
 
 	"git.noncepad.com/pkg/bot/solpipe/bidder/manager/bidder"
 	"git.noncepad.com/pkg/bot/state"
-	"git.noncepad.com/pkg/optimizer/harness"
-	sgo "github.com/gagliardetto/solana-go"
+	harness "git.noncepad.com/pkg/optimizer/api"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // testOwner is a fixed, deterministic pubkey for tests that need a

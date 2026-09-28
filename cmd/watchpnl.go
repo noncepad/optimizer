@@ -15,7 +15,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/util"
 	"git.noncepad.com/pkg/solpipe-util/common"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // mintSOL is wrapped SOL's mint -- the identifier native SOL balances are

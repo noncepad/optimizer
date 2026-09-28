@@ -7,7 +7,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/prefetch/pnl"
 	"git.noncepad.com/pkg/optimizer/store"
 	"git.noncepad.com/pkg/solpipe-util/common"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // pnlBetweenTimeLayout is the accepted --start/--end format: local time,

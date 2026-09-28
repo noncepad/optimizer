@@ -15,7 +15,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/prefetch/liquidity"
 	"git.noncepad.com/pkg/optimizer/store"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // One price entry keyed by mint 

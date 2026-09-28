@@ -4,7 +4,7 @@
 package liquidity
 
 import (
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Config holds static parameters for the router and its LiquidityPartitioner.

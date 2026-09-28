@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 var botPipelineWhiteList = ""

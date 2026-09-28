@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // RecordTipUpdate persists update into bundler_tip as the latest known-good

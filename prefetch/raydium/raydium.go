@@ -13,7 +13,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/prefetch/raydium/clmm"
 	"git.noncepad.com/pkg/optimizer/prefetch/raydium/cpmm"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 var ProgramID = sgo.MustPublicKeyFromBase58("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")

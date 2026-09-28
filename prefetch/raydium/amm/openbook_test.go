@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"git.noncepad.com/pkg/optimizer/prefetch/raydium/amm"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // buildMarketBlob lays out a synthetic OpenBook/Serum MarketState account

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"git.noncepad.com/pkg/solpipe-util/graph"
-	sgo "github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/programs/token"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/programs/token"
 )
 
 // fakeAccount is the minimal graph.Account this package's OnToken ever

@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"time"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Snapshot is one position observation, optionally priced.

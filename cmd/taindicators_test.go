@@ -84,6 +84,33 @@ func TestBollingerBandsRealVolatilityExceedsFloorIsUnaffected(t *testing.T) {
 	}
 }
 
+func TestBollingerBandsLowerNeverGoesNegative(t *testing.T) {
+	// Real mechanism this guards against: a single violent transient
+	// (e.g. a stale bad price -- see market_stats.rs's REJECT_RATIO/
+	// anchor doc comments -- rolling through the SMA window right after
+	// a bot restart) sitting inside the same period-length window as
+	// otherwise-calm readings inflates sigma enough that a naive
+	// mid-k*sigma goes negative (this exact window: mean=160, sigma=220,
+	// mid-2*sigma=-280 without the floor). A dollar price can never be
+	// negative, so lower must be floored at 0 regardless of how large
+	// sigma gets.
+	values := []float64{50, 50, 50, 50, 50, 50, 50, 50, 600}
+	_, _, lower := bollingerBands(values, 5, 2.0)
+	sawRealComputation := false
+	for i, v := range lower {
+		if math.IsNaN(v) {
+			continue
+		}
+		sawRealComputation = true
+		if v < 0 {
+			t.Errorf("index %d: lower band = %v, must never be negative", i, v)
+		}
+	}
+	if !sawRealComputation {
+		t.Fatal("fixture produced no non-NaN lower values -- test isn't exercising the real computation")
+	}
+}
+
 func TestRSIAllGainsIsOneHundred(t *testing.T) {
 	values := make([]float64, 20)
 	for i := range values {

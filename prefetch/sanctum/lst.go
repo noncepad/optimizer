@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	sgo "github.com/gagliardetto/solana-go"
-	sgotkn "github.com/gagliardetto/solana-go/programs/token"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	sgotkn "github.com/solana-foundation/solana-go/v2/programs/token"
 )
 
 // Sanctum S Controller account layout offsets.

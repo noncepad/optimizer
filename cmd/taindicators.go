@@ -80,7 +80,15 @@ const minBandWidthFrac = 0.001
 // bollingerBands returns the classic (SMA, SMA+k·σ, SMA-k·σ) triple over
 // period-length trailing windows, with each band's half-width floored to
 // minBandWidthFrac of the mid price (see its own doc comment) so the
-// bands never fully collapse onto the price/SMA line.
+// bands never fully collapse onto the price/SMA line. lower is
+// additionally floored at 0 -- a real, live-observed case: a single
+// violent transient sitting inside the same period-length window as
+// otherwise-calm readings (e.g. a stale bad price rolling off right
+// after a bot restart) inflates σ enough that mid-k·σ goes negative,
+// and a dollar price can never be negative -- the dashboard's own "low"
+// axis label reads directly off this array (see marketwatchchart.go's
+// seriesRange call), so a negative value there is never just a harmless
+// off-scale number, it's a visibly wrong price.
 func bollingerBands(values []float64, period int, numStdDev float64) (mid, upper, lower []float64) {
 	mid = sma(values, period)
 	sd := stddev(values, period)
@@ -96,7 +104,7 @@ func bollingerBands(values []float64, period int, numStdDev float64) (mid, upper
 			halfWidth = minHalfWidth
 		}
 		upper[i] = mid[i] + halfWidth
-		lower[i] = mid[i] - halfWidth
+		lower[i] = math.Max(0, mid[i]-halfWidth)
 	}
 	return mid, upper, lower
 }

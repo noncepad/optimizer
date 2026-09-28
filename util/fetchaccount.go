@@ -6,7 +6,7 @@ import (
 
 	"git.noncepad.com/pkg/bot/state"
 	"git.noncepad.com/pkg/solpipe-util/graph"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // FetchAccount fetches one already-known account address as a one-shot

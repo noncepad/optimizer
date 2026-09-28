@@ -3,7 +3,7 @@ package api
 import (
 	"git.noncepad.com/pkg/optimizer/store"
 	"git.noncepad.com/pkg/solpipe-util/graph"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // ChainState maintains pool, dex data relevant for compiling static information into trading bots.

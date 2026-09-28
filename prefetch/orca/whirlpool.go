@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Account layout offsets (from start of account data, including 8-byte discriminator).

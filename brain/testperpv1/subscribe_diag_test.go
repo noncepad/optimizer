@@ -42,7 +42,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/util"
 	"git.noncepad.com/pkg/solpipe-util/common"
 	"git.noncepad.com/pkg/solpipe-util/graph"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // TestMain applies PROGRAM_SOLPIPE/PROGRAM_JAR (see

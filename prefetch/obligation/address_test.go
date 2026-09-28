@@ -3,7 +3,7 @@ package obligation
 import (
 	"testing"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // TestKnownWalletAddressesMatchRustDerivation is a golden test against

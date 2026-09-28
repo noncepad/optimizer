@@ -11,8 +11,8 @@ import (
 	"git.noncepad.com/pkg/solpipe-util/graph"
 	"git.noncepad.com/pkg/solpipe-util/logger"
 	bin "github.com/gagliardetto/binary"
-	sgo "github.com/gagliardetto/solana-go"
-	sgotkn "github.com/gagliardetto/solana-go/programs/token"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	sgotkn "github.com/solana-foundation/solana-go/v2/programs/token"
 )
 
 // fetch discovers the Sanctum S Controller's pool_state and

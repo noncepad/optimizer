@@ -11,7 +11,7 @@ import (
 	"git.noncepad.com/pkg/optimizer/bundler"
 	"git.noncepad.com/pkg/solpipe-util/common"
 	"git.noncepad.com/pkg/solpipe-util/graph"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // ErrBotNotConnectedYet is returned by SendBundlerTipUpdate while the bot

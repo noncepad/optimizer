@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // MintDecimals is one mint_info row, JSON-shaped for catscope-rust-bot's

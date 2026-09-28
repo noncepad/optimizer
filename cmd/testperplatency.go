@@ -15,10 +15,10 @@ import (
 	"git.noncepad.com/pkg/optimizer/prefetch/liquidity"
 	"git.noncepad.com/pkg/optimizer/store"
 	"git.noncepad.com/pkg/solpipe-util/logger"
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
-// TestLatencyLiteV1Cmd mirrors TestPerpCmd exactly -- same
+// TestPerpLatencyCmd mirrors TestPerpCmd exactly -- same
 // allocation/prefetch/upload flow -- except it wires up
 // testperplatencyv1.Create instead of testperpv1.Create, which uploads the
 // WASM bot image with MODE=testperplatencyv1 selected instead of
@@ -27,7 +27,7 @@ import (
 // catscope-rust-bot's src/brain/testperplatencyv1 doc comment for what
 // that mode actually does (a real-transaction, CYCLE_TARGET-times-repeated
 // deposit/withdraw latency test, not a trading strategy).
-type TestLatencyLiteV1Cmd struct {
+type TestPerpLatencyCmd struct {
 	ParentKey  string `arg:"fee-payer" help:"the file path to the fee payer (not bidder proxy fee payer)"`
 	WorkingDir string `option:"work" help:"working directory"`
 	// Protocol scopes a real run to just one protocol's deposit<->withdraw
@@ -45,10 +45,16 @@ type TestLatencyLiteV1Cmd struct {
 	// testperplatencyv1/init.go's Init) selecting an experimental copy of
 	// the WASM module with the DEX/lending subscription setup stripped
 	// out -- otherwise behaves exactly like "native".
-	Protocol string `option:"protocol" help:"which single protocol to run (solend/kamino/marginfi/native/native_lite) -- leave unset to run the original full unscoped sequence"`
+	// "tx_health" is a second Go-side-only sentinel selecting a
+	// completely separate, passive listen-only WASM module
+	// (midontxhealthv1) that checks whether the Transaction-lane event
+	// stream delivers every transaction per slot -- sends no
+	// transactions, so Evaluate's real parent->child boot transfer is
+	// skipped entirely for this value (see init.go/eval.go).
+	Protocol string `option:"protocol" help:"which single protocol to run (solend/kamino/marginfi/native/native_lite/tx_health) -- leave unset to run the original full unscoped sequence"`
 }
 
-func (r *TestLatencyLiteV1Cmd) Run(rc *RunConfig) error {
+func (r *TestPerpLatencyCmd) Run(rc *RunConfig) error {
 	parentKey, err := sgo.PrivateKeyFromSolanaKeygenFile(r.ParentKey)
 	if err != nil {
 		return fmt.Errorf("failed to load authorizer: %s", err)
@@ -75,7 +81,7 @@ func (r *TestLatencyLiteV1Cmd) Run(rc *RunConfig) error {
 	} else {
 		stateClient = dialer.State()
 	}
-	// TestLatencyLiteV1Cmd only ever reads the prefetch database that
+	// TestPerpLatencyCmd only ever reads the prefetch database that
 	// DownloadArbCmd already populated at this fixed path — it does not
 	// fetch on-chain dex state itself, regardless of r.WorkingDir.
 	prefetchDB, err := store.Open(getDBFilePath())

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Entry is one deposit or borrow line inside a parsed obligation.

@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"git.noncepad.com/pkg/optimizer/prefetch/sanctum"
-	sgo "github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/rpc"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 )
 
 // tokenAccountAmountOffset is the byte offset of the `amount` (u64) field

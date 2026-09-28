@@ -10,8 +10,8 @@ import (
 	"sync"
 
 	bin "github.com/gagliardetto/binary"
-	sgo "github.com/gagliardetto/solana-go"
-	sgotkn "github.com/gagliardetto/solana-go/programs/token"
+	sgo "github.com/solana-foundation/solana-go/v2"
+	sgotkn "github.com/solana-foundation/solana-go/v2/programs/token"
 )
 
 // MintAccountSize is the fixed on-chain byte size of an SPL Token Mint

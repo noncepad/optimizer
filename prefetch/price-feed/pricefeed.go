@@ -12,7 +12,7 @@ package pricefeed
 import (
 	"time"
 
-	sgo "github.com/gagliardetto/solana-go"
+	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
 // Jupiter Price API v3 endpoint
