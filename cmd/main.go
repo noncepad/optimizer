@@ -17,9 +17,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// defaultBotMarketID is overridden at build time via -ldflags "-X main.defaultBotMarketID=<key>".
-var defaultBotMarketID = "6VQk8GA84p7zZSyL8XtX6oVd3Vp4EJ5hoUenKoC3fHSf"
-
 type CLI struct {
 	Verbose          bool                `short:"v" env:"VERBOSE" help:"Enable debug-level logging."`
 	StateURL         string              `option:"state" help:"state url."`
@@ -48,6 +45,9 @@ type CLI struct {
 	// name.
 	Latencyreport LatencyReportCmd `cmd:"latencyreport" help:"Turn a native-transfer latency run's log (testperplatencyv1/testlatencylitev1) into an HTML report."`
 }
+
+// defaultBotMarketID is overridden at build time via -ldflags "-X main.defaultBotMarketID=<key>".
+var defaultBotMarketID = "6VQk8GA84p7zZSyL8XtX6oVd3Vp4EJ5hoUenKoC3fHSf"
 
 type VersionCmd struct{}
 
