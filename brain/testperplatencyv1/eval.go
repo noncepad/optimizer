@@ -78,15 +78,6 @@ func (hs *eventHook) Evaluate(solpipeState brain.SolpipeState, bidderState brain
 	if hs.didBootTransfer {
 		return nil
 	}
-	// "tx_health" (see init.go's Init) is a passive listen-only health
-	// check -- it sends no transactions and needs no wallet, so the real
-	// parent->child boot transfer below would just be unwanted spend
-	// with nothing to fund. Latch didBootTransfer immediately so this
-	// never even checks the parent balance.
-	if hs.config.TargetProtocol == "tx_health" {
-		hs.didBootTransfer = true
-		return nil
-	}
 	parentSOL := solpipeState.System(hs.parentKey.PublicKey())
 	if parentSOL == 0 {
 		// solpipeState.System returns 0 both for "confirmed empty" and

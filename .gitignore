@@ -2,7 +2,9 @@
 /fee-payer.json
 /.env
 /target
+/bin
 /cmd/cmd
 /hedgefund/hedgefund
 /child*json
 /recov*json
+/harness/fsproxy.guest

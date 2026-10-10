@@ -97,9 +97,10 @@ func (r *DownloadArbCmd) Run(rc *RunConfig) error {
 		}
 	}
 
-	// ArbCmd only ever reads the prefetch database that DownloadArbCmd
-	// already populated at this fixed path — it does not fetch on-chain
-	// dex state itself, regardless of r.WorkingDir.
+	// Every mode-specific command (marketwatch, testperplatency,
+	// xstockshealth, ...) only ever reads the prefetch database this
+	// command populates at this fixed path - none of them fetch
+	// on-chain dex state themselves, regardless of their own WorkingDir.
 	//
 	// This must be the only store.Open call for this path: a second,
 	// separately-pooled *sql.DB against the same file (as this used to do,

@@ -25,12 +25,11 @@ import (
 var mintSOL = sgo.MustPublicKeyFromBase58("So11111111111111111111111111111111111111112")
 
 // tradingChildKeyIndex is the derivation index every bot mode in this repo
-// uses for its actual trading key -- see arbv1/testperpv1/helloworldv1/
-// perpfundingv1's eval.go, all four call
-// common.DeriveChildKeyFromIndex(hs.parentKey, 1) identically -- and
-// shell/tools.go's walletBalanceTool, which documents the same constant
-// for the same reason: the derived child, not the parent fee-payer, is
-// what actually trades.
+// uses for its actual trading key -- see testperplatencyv1/xstockshealthv1's
+// own eval.go, both call common.DeriveChildKeyFromIndex(hs.parentKey, 1)
+// identically -- and shell/tools.go's walletBalanceTool, which documents
+// the same constant for the same reason: the derived child, not the
+// parent fee-payer, is what actually trades.
 const tradingChildKeyIndex = 1
 
 // WatchPnLCmd polls the derived trading (child) wallet's live SOL + SPL

@@ -446,10 +446,8 @@ func buildPageData(total uint64, entries []HealthEntry, updated bool, liquidatio
 // riskTierLabels/riskTierColors index-align with MarketOverview.
 // RiskTierCounts -- see KaminoXstocksWatcher::risk_tier_counts's own doc
 // comment on the Rust side for the exact health-factor boundaries.
-var (
-	riskTierLabels = [4]string{"Eligible now (≤1.0)", "At risk (1.0-1.5)", "Watch (1.5-3.0)", "Safe (≥3.0)"}
-	riskTierColors = [4]string{"#f85149", "#f0883e", "#d29922", "#3fb950"}
-)
+var riskTierLabels = [4]string{"Eligible now (≤1.0)", "At risk (1.0-1.5)", "Watch (1.5-3.0)", "Safe (≥3.0)"}
+var riskTierColors = [4]string{"#f85149", "#f0883e", "#d29922", "#3fb950"}
 
 // buildRiskPie turns raw tier counts into display slices plus a ready
 // conic-gradient CSS value for the donut -- template.CSS, not a plain

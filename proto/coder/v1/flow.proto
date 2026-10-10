@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package flow;
+
+option go_package = "git.noncepad.com/pkg/optimizer/gen/flow/v1;flowv1";
+
+// GetInfoRequest asks for wallet's current status with Flow.
+message GetInfoRequest{
+  bytes wallet = 1;
+}
+
+// GetInfoResponse mirrors flow.Flow's own query methods: the shared
+// Delegation every deposit address is created under, Flow's fee payer,
+// the one-time setup fee, and wallet's own assigned deposit address, if
+// any (see AssignedDeposit).
+message GetInfoResponse{
+  bytes delegation = 1;
+  bytes fee_payer = 2;
+  uint64 setup_fee_usdc = 3;
+  bool assigned = 4;
+  bytes deposit_address = 5; // only set if assigned
+}
+
+// StartSetupPaymentRequest begins the one-time USDC setup payment for
+// wallet, creating its deposit address under the shared Delegation if this
+// is the first time wallet has been seen (see flow.Flow.StartSetupPayment).
+message StartSetupPaymentRequest{
+  bytes wallet = 1;
+}
+
+// StartFundPaymentRequest begins a USDC transfer from wallet's own
+// associated token account into its already-assigned deposit address.
+// wallet must already have one (see GetInfo) - this does not create one
+// (see flow.Flow.StartFundPayment).
+message StartFundPaymentRequest{
+  bytes wallet = 1;
+  uint64 amount = 2; // USDC base units
+}
+
+// StartPaymentResponse is returned by both StartSetupPayment and
+// StartFundPayment: req_id identifies this payment for the matching
+// FinishSetupPayment/FinishFundPayment call, and unsigned_tx is the
+// serialized transaction wallet must sign - it alone can authorize the
+// transfer, Flow cannot sign on its behalf.
+message StartPaymentResponse{
+  string req_id = 1;
+  bytes unsigned_tx = 2;
+}
+
+// FinishPaymentRequest delivers wallet's signature over the unsigned
+// transaction returned by StartSetupPayment/StartFundPayment.
+message FinishPaymentRequest{
+  string req_id = 1;
+  bytes signature = 2;
+}
+
+message FinishPaymentResponse{
+  bytes signature = 1;
+  uint64 slot = 2;
+}
+
+service Flow{
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+  rpc StartSetupPayment(StartSetupPaymentRequest) returns (StartPaymentResponse);
+  rpc FinishSetupPayment(FinishPaymentRequest) returns (FinishPaymentResponse);
+  rpc StartFundPayment(StartFundPaymentRequest) returns (StartPaymentResponse);
+  rpc FinishFundPayment(FinishPaymentRequest) returns (FinishPaymentResponse);
+}

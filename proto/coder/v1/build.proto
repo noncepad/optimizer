@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+package builder;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "git.noncepad.com/pkg/optimizer/gen/builder/v1;builderv1";
+
+// GetInformationRequest just confirms machine_id is a live, known machine -
+// see MachineServer's own "machine_id" field for why every RPC here carries
+// one: this service has no notion of a filesystem independent of a specific
+// machine.
+message GetInformationRequest{
+  uint32 machine_id = 1;
+}
+
+message LsRequest{
+  uint32 machine_id = 2;
+  string directory = 1;
+}
+
+message LsResponse{
+  repeated LsEntry entry = 1;
+}
+
+message LsEntry{
+  string path = 1;
+  bool is_dir = 2;
+  int64 size = 3;
+  int64 modified_at = 4; // unix seconds
+}
+
+message ReadRequest{
+  oneof data{
+    uint32 machine_id = 1;
+    ReadDetail request = 2;
+  }
+}
+
+message ReadDetail{
+  // ignore size
+  FileHeader header = 1;
+  int64 offset = 2;
+  int64 limit = 3;
+}
+
+message ReadResponse{
+  oneof data{
+    FileHeader header = 1;
+    FileBlob blob = 2;
+  }
+}
+
+message FileHeader{
+  int32 file_id = 1;
+  string path = 2;
+  int64 size = 3;
+}
+
+message FileBlob{
+  int32 file_id = 1;
+  bytes blob = 2;
+}
+
+message WriteRequest{
+  // machine_id is only read from the first message on the stream.
+  uint32 machine_id = 3;
+  oneof data{
+    FileHeader header = 1;
+    FileBlob blob = 2;
+  }
+}
+
+// WriteAck is sent once per file written (correlated by file_id, the
+// same id its FileHeader/FileBlob messages carried), not once per
+// stream - Write is a long-lived stream shared across many files over
+// its whole lifetime, so a per-stream-only ack would give a caller no
+// way to know when ITS OWN file was actually applied, only that the
+// stream eventually closes.
+message WriteAck{
+  int32 file_id = 1;
+  string error = 2; // empty means success
+}
+
+// Find files by content
+message GrepRequest{
+  uint32 machine_id = 9;
+  string path = 1;
+  string pattern = 2;
+  string glob = 3;
+  string file_type = 4;
+  int32 before_lines = 5;
+  int32 after_lines = 6;
+  bool enable_multiline = 7;
+  bool case_insensitive = 8;
+}
+
+message GrepResponse{
+  FileHeader header = 1;
+  string content = 2;
+  string path = 3;
+  int32 line = 4;
+}
+
+// Find files by path and file names
+message GlobRequest{
+  uint32 machine_id = 3;
+  string path = 1;
+  string pattern = 2;
+}
+
+// Find files by path and file names
+message GlobResponse{
+  string path = 1;
+  bool is_dir = 2;
+  int64 size = 3;
+  int64 modified_at = 4;
+}
+
+
+message EditRequest{
+  // machine_id is only read from the first message on the stream.
+  uint32 machine_id = 5;
+  string path = 1;
+  string old_content = 2;
+  string new_content = 3;
+  bool replace_all = 4;
+  // request_id is caller-assigned, unique within this stream's
+  // lifetime, and echoed back on the matching EditAck - the same
+  // correlation role FileHeader/FileBlob's file_id plays for Write.
+  uint32 request_id = 6;
+}
+
+// EditAck is sent once per edit (correlated by request_id), not once per
+// stream - see WriteAck's own doc comment for why.
+message EditAck{
+  uint32 request_id = 1;
+  string error = 2; // empty means success
+}
+
+message UntarRequest{
+  oneof data{
+    // name of the directory into which we do tar -xvzf
+    UntarHeader header = 1;
+    // send an EOF with len(data)=0
+    bytes blob = 2;
+  }
+}
+
+message UntarHeader{
+  uint32 machine_id = 1;
+  string path = 2;
+}
+
+service FileSystemWrapper{
+  rpc GetInformation(GetInformationRequest) returns (google.protobuf.Empty);
+  rpc LsInfo(LsRequest) returns (LsResponse);
+  rpc Read(stream ReadRequest) returns (stream ReadResponse);
+  rpc Write(stream WriteRequest) returns (stream WriteAck);
+  rpc GrepRaw(GrepRequest) returns (stream GrepResponse);
+  rpc GlobRaw(GlobRequest) returns (stream GlobResponse);
+  rpc Edit(stream EditRequest) returns (stream EditAck);
+  // transmit a gzip tarball and decompress it
+  rpc Untar(stream UntarRequest) returns (google.protobuf.Empty);
+}
+

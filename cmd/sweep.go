@@ -17,8 +17,8 @@ import (
 //
 // The child swept is the same index-1 child every other bot mode in
 // this repo already derives via
-// common.DeriveChildKeyFromIndex(parentKey, 1) (arbv1, testperpv1,
-// testperplatencyv1, ...) -- reproduced here as the equivalent
+// common.DeriveChildKeyFromIndex(parentKey, 1) (testperplatencyv1,
+// xstockshealthv1, ...) -- reproduced here as the equivalent
 // treasury.Budget(id) call (see DeriveChildKeyFromIndex's own body:
 // it just builds this same id and calls DeriveChildKeyV2, which is what
 // Budget/Child do internally too).

@@ -87,9 +87,9 @@ func TestChildID(t *testing.T) {
 }
 
 func TestNewUploadRequestAllocatesResultC(t *testing.T) {
-	req := NewUploadRequest("arbv1")
-	if req.Mode != "arbv1" {
-		t.Fatalf("expected mode arbv1, got %q", req.Mode)
+	req := NewUploadRequest("marketwatchv1")
+	if req.Mode != "marketwatchv1" {
+		t.Fatalf("expected mode marketwatchv1, got %q", req.Mode)
 	}
 	if req.ResultC == nil || cap(req.ResultC) != 1 {
 		t.Fatalf("expected a buffered (size 1) ResultC, got %v", req.ResultC)

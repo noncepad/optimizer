@@ -8,11 +8,9 @@ import (
 )
 
 // KeyFlagWallet is the one wire-protocol key flag every bot mode in
-// this codebase already shares byte-for-byte (see brain/arbv1,
-// brain/testperpv1, brain/testperplatencyv1, brain/perpfundingv1,
-// brain/helloworldv1, brain/leveragedloopv1, and brain/multimodelv1's
-// own message.go, each with an identical KeyFlagWallet = 3 and DoWallet
-// of their own) -- unlike higher-numbered, per-strategy key flags, this
+// this codebase already shares byte-for-byte (see
+// brain/testperplatencyv1's and brain/xstockshealthv1's own message.go,
+// each with an identical KeyFlagWallet = 3 and DoWallet of their own) -- unlike higher-numbered, per-strategy key flags, this
 // one is universal: every WASM bot needs a signing key sent to it
 // exactly this way before it can do anything real. Kept here, once,
 // rather than making every caller of this package duplicate it again.

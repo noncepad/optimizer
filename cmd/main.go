@@ -26,10 +26,7 @@ type CLI struct {
 	CPUProfile       string              `option:"cpuprofile" help:"write a pprof CPU profile to this file."`
 	CPUProfileTime   time.Duration       `option:"cpuprofiletime" default:"20s" help:"stop and flush the CPU profile after this long, regardless of how the command itself ends."`
 	Version          VersionCmd          `cmd:"version" help:"Print version."`
-	Arb              ArbCmd              `cmd:"arb" help:"Run arbv1."`
-	DownloadArb      DownloadArbCmd      `cmd:"arb" help:"Run arbv1."`
-	Perp             PerpCmd             `cmd:"perp" help:"Run perpfundingv1."`
-	Testperp         TestPerpCmd         `cmd:"testperp" help:"Run testperpv1 (real-transaction Solend/Kamino deposit/withdraw smoke test)."`
+	DownloadArb      DownloadArbCmd      `cmd:"arb" help:"Download/populate prefetch.db from every tracked DEX/lending source."`
 	TestperpLatency  TestPerpLatencyCmd  `cmd:"testperplatency" help:"Run testperplatencyv1 (real-transaction, 100x-cycled deposit/withdraw latency test -- use --protocol to scope to one protocol)."`
 	Balance          BalanceCmd          `cmd:"balance" help:"Get the balance for the trading wallet."`
 	Summary          SummaryCmd          `cmd:"summary" help:"Print a summary of what's in prefetch.db."`
@@ -40,12 +37,9 @@ type CLI struct {
 	PnlBetween       PnlBetweenCmd       `cmd:"pnl-between" help:"Print per-mint PnL for the trading wallet between two timestamps, from prefetch.db (populated by watch-pnl)."`
 	WatchLstYield    WatchLstYieldCmd    `cmd:"watch-lst-yield" help:"Sample real LST (37 real candidates) exchange rates into prefetch.db for staking-yield estimation."`
 	WatchObligations WatchObligationsCmd `cmd:"watch-obligations" help:"Poll the trading wallet's own Solend/Kamino lending obligations (pair/directional/hawkes) into prefetch.db."`
-	LeveragedLoop    LeveragedLoopCmd    `cmd:"leveraged-loop" help:"Run leveragedloopv1 (Phase 2: a single jitoSOL/USDC Kamino leverage loop, manual trigger only)."`
-	MultiModel       MultiModelCmd       `cmd:"multimodel" help:"Run multimodelv1 (PLAN-1.md Phase 5 sub-phase 5a: idle-only -- wallet + market-data subscriptions, no decision/execution logic yet)."`
 	Alt              AltCmd              `cmd:"alt" help:"Analyze the trading wallet's recent transaction history and (unless --dry-run=false) create/populate an on-chain Address Lookup Table, persisting it into prefetch.db."`
 	XstocksHealth    XstocksHealthCmd    `cmd:"xstockshealth" help:"Run xstockshealthv1 (Stocklana hackathon plan: watches Kamino xStocks obligations/reserves, logs a health-factor board -- passive, sends no transactions)."`
 	Sweep            SweepCmd            `cmd:"sweep" help:"Sweep the index-1 child wallet's SOL/SPL token balances back to the parent fee-payer, via harness.Treasury/Budget.Close."`
-	Compare          CompareCmd          `cmd:"compare" help:"Upload testperplatencyv1 to two validator pipelines via brain.Hook.Request and compare their native-transfer write-delay latency."`
 	MarketWatch      MarketWatchCmd      `cmd:"market-watch" help:"Upload marketwatchv1 (read-only, never trades) and open a live terminal dashboard of volatility/correlation across SOL/JUP/JTO/BONK/WIF/RAY."`
 	// Kong derives a command's name from its field name (kebab-cased),
 	// not from the `cmd` tag's value (that tag is just a boolean marker).

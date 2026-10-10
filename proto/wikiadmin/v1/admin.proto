@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+// AdminService manages wiki-server administration: currently user
+// accounts. Kept separate from wiki.v1.WikiService (content
+// reading/writing) so the two can be exposed on different endpoints/
+// credentials - e.g. WikiService open to every logged-in user, AdminService
+// restricted to site admins.
+//
+// Note: the migrated `users` table (db/schema.sql) only carries login
+// names pulled from Foswiki's .htpasswd - see README.md. Implementing
+// CreateUser (and, if wanted, profile fields like wiki_name/email)
+// requires adding storage to that table; this proto defines the
+// intended API surface for that.
+package wikiadmin.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "git.noncepad.com/pkg/optimizer/gen/wikiadmin/v1;wikiadminv1";
+
+// User is an account that can log in to the wiki.
+message User {
+  string login = 1;       // unique login name (Foswiki "cuid"-equivalent)
+  string wiki_name = 2;   // display / WikiWord name, e.g. "JoelDeJesus"
+  string email = 3;
+  bool disabled = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message CreateUserRequest {
+  string login = 1;
+  string wiki_name = 2;
+  string email = 3;
+}
+message CreateUserResponse {
+  User user = 1;
+}
+
+message GetUserRequest {
+  string login = 1;
+}
+
+message ListUsersRequest {}
+message ListUsersResponse {
+  repeated User users = 1;
+}
+
+// UpdateUserRequest updates only the fields explicitly set.
+message UpdateUserRequest {
+  string login = 1;
+  optional string wiki_name = 2;
+  optional string email = 3;
+  optional bool disabled = 4;
+}
+message UpdateUserResponse {
+  User user = 1;
+}
+
+message DeleteUserRequest {
+  string login = 1;
+}
+
+service AdminService {
+  // CreateUser registers a new login. Fails if login is already taken.
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+
+  rpc GetUser(GetUserRequest) returns (User);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty);
+}

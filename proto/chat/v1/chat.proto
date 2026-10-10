@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+// ChatService wraps the chat package (see its own doc comment) as a
+// gRPC service: any authenticated wiki user (identified the same way
+// WikiService/AdminService are - the "USER" gRPC metadata key, see
+// grpcauth) can create a room, invite other users to it by login, join
+// a room they created or were invited to, and send/receive messages
+// once joined. Entirely in-memory (chat package's own doc comment) -
+// nothing here survives a server restart, and an invitation sent to a
+// login not currently connected to ListenForInvites is simply lost, not
+// queued.
+package chat.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "git.noncepad.com/pkg/optimizer/gen/chat/v1;chatv1";
+
+message CreateRoomRequest {
+  string title = 1;
+}
+message CreateRoomResponse {
+  uint64 room_id = 1;
+  string title = 2;
+}
+
+// Invite's caller must be room_id's admin - the login whose
+// CreateRoom call made it (only the admin may invite).
+message InviteRequest {
+  uint64 room_id = 1;
+  string invitee = 2;  // login to invite
+}
+
+message ListenForInvitesRequest {}
+
+// Invitation is streamed once per invite received while a
+// ListenForInvites call is open.
+message Invitation {
+  uint64 room_id = 1;
+  string title = 2;
+  string from = 3;  // the admin who sent the invite
+}
+
+// JoinRoom's caller must be room_id's admin or have been invited to it
+// (see InviteRequest) - streams every message sent to the room
+// (including the caller's own, echoed back) for as long as this call
+// stays open. The caller's membership - and so their ability to call
+// SendMessage for this room - lasts exactly as long as this call does;
+// there is no separate "leave" call, and no message history is
+// delivered on join (see ChatService's own doc comment: nothing here is
+// durable).
+message JoinRoomRequest {
+  uint64 room_id = 1;
+}
+
+message ChatMessage {
+  uint64 room_id = 1;
+  string from = 2;
+  string text = 3;
+  google.protobuf.Timestamp sent_at = 4;
+}
+
+// SendMessage's caller must currently have an open JoinRoom call for
+// room_id (see JoinRoomRequest's own doc comment) - this is a separate,
+// stateless call from that one, so it re-identifies the room by id
+// rather than requiring the same stream.
+message SendMessageRequest {
+  uint64 room_id = 1;
+  string text = 2;
+}
+
+service ChatService {
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse);
+  rpc Invite(InviteRequest) returns (google.protobuf.Empty);
+  rpc ListenForInvites(ListenForInvitesRequest) returns (stream Invitation);
+  rpc JoinRoom(JoinRoomRequest) returns (stream ChatMessage);
+  rpc SendMessage(SendMessageRequest) returns (google.protobuf.Empty);
+}

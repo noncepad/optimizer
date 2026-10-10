@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package machine;
+
+import "google/protobuf/empty.proto";
+option go_package = "git.noncepad.com/pkg/optimizer/gen/machine/v1;machinev1";
+
+
+message IdOnly{
+  uint32 machine_id = 1;
+}
+
+message CreateRequest{
+  MachineSize size = 1;
+  BuildType build = 2;
+}
+
+enum MachineSize{
+  Small=0;
+  Medium=1;
+  Large=2;
+}
+
+enum BuildType{
+  Rust=0;
+  Go=1;
+}
+
+message CreateResponse{
+  oneof data{
+    // $user_$id is the base directory
+    uint32 id = 1;
+    Usage usage = 2;
+  }
+}
+
+message Usage{
+  int64 cpu = 1;
+  int64 memory = 2;
+  int64 disk = 3;
+}
+
+message ExecRequest{
+  // machine_id selects which machine (returned by Create) this Exec call
+  // targets. Only read from the first message on the stream.
+  oneof data{
+    Command command = 1;
+    Stdio stdin = 2;
+  }
+}
+
+message Command{
+  uint32 machine_id = 1;
+  string command = 2;
+  repeated string arg = 3;
+  // env adds to (rather than replaces) the command's environment - see
+  // spawner/fsproxy's runExec for the base it's layered on.
+  map<string, string> env = 4;
+}
+
+message Stdio{
+  int32 channel = 1;
+  bytes data = 2;
+}
+
+message ExecResponse{
+  oneof data {
+    // A chunk of output on channel 1 (stdout) or 2 (stderr).
+    Stdio stdio = 1;
+    // The command's exit status - always the last ExecResponse sent for
+    // a given Exec call, after which the stream closes. -1 means the
+    // process could not report a normal exit code (e.g. it was killed by
+    // a signal).
+    int32 exit_code = 2;
+  }
+}
+
+message LintResponse{
+  string data = 1;
+}
+
+message FormatRequest{
+  uint32 machine_id = 1;
+  repeated string path = 2;
+}
+
+message TestRequest{
+  uint32 machine_id = 1;
+  map<string,string> env = 2;
+  repeated string arg = 3;
+}
+
+message CompileRequest{
+  uint32 machine_id = 1;
+  bool skip_export = 2;
+  map<string,string> env = 3;
+  // specify which files need to be exported
+  repeated string export_path = 4;
+}
+
+message CompileResponse{
+  oneof data{
+    CompileLog log = 1;
+    CompileBinary binary = 2;
+  }
+}
+
+message CompileLog{
+  string data = 1;
+}
+
+message CompileBinary{
+  string path = 1;
+  bytes data = 2;
+}
+
+service Machine{
+  // a disconnect triggers the machine to be deleted
+  rpc Create(CreateRequest) returns (stream CreateResponse);
+  // compile the project and get the result
+  rpc Compile(CompileRequest) returns (stream CompileResponse);
+  // run an arbitrary  exec command
+  rpc Exec(stream ExecRequest) returns (stream ExecResponse);
+  // test if the code is properly formated
+  rpc Lint(IdOnly) returns (stream LintResponse);
+  // format files
+  rpc Format(FormatRequest) returns (google.protobuf.Empty);
+  // run tests
+  rpc Test(TestRequest) returns (stream LintResponse);
+}
+
+
+/*
+	Compile(ctx context.Context, binaryPath string) (io.ReadCloser, error)
+	Lint(ctx context.Context) (io.ReadCloser, error)
+	Format(ctx context.Context, paths []string) (io.ReadCloser, error)
+	Test(ctx context.Context) (io.ReadCloser, error)
+	Exec(ctx context.Context, command string, args []string) (io.WriteCloser, io.ReadCloser, error)
+  */

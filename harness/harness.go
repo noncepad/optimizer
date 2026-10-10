@@ -1,4 +1,5 @@
-package optimizer
+// Package harness implements interfaces in the ./api directory.
+package harness
 
 import (
 	"context"

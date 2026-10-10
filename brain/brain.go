@@ -8,7 +8,7 @@
 // This package deliberately knows nothing about any specific trading
 // strategy's wire protocol (message key flags, wallet funding, latency
 // reports, etc.) -- that belongs to whatever code drives a given Bot's
-// SendC/RecvC. See brain/arbv1, brain/testperpv1, and siblings for that.
+// SendC/RecvC. See brain/marketwatchv1, brain/testperplatencyv1, and siblings for that.
 package brain
 
 import (

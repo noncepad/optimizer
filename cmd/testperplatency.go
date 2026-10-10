@@ -18,13 +18,11 @@ import (
 	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
-// TestPerpLatencyCmd mirrors TestPerpCmd exactly -- same
-// allocation/prefetch/upload flow -- except it wires up
-// testperplatencyv1.Create instead of testperpv1.Create, which uploads the
-// WASM bot image with MODE=testperplatencyv1 selected instead of
-// MODE=testperpv1, plus TEST_PROTOCOL (see Protocol below) to scope a real
-// run to just one protocol's deposit<->withdraw cycle. See
-// catscope-rust-bot's src/brain/testperplatencyv1 doc comment for what
+// TestPerpLatencyCmd wires up testperplatencyv1.Create, which uploads the
+// WASM bot image with MODE=testperplatencyv1 selected, plus TEST_PROTOCOL
+// (see Protocol below) to scope a real run to just one protocol's
+// deposit<->withdraw cycle. See catscope-rust-bot's
+// src/brain/testperplatencyv1 doc comment for what
 // that mode actually does (a real-transaction, CYCLE_TARGET-times-repeated
 // deposit/withdraw latency test, not a trading strategy).
 type TestPerpLatencyCmd struct {
@@ -45,13 +43,7 @@ type TestPerpLatencyCmd struct {
 	// testperplatencyv1/init.go's Init) selecting an experimental copy of
 	// the WASM module with the DEX/lending subscription setup stripped
 	// out -- otherwise behaves exactly like "native".
-	// "tx_health" is a second Go-side-only sentinel selecting a
-	// completely separate, passive listen-only WASM module
-	// (midontxhealthv1) that checks whether the Transaction-lane event
-	// stream delivers every transaction per slot -- sends no
-	// transactions, so Evaluate's real parent->child boot transfer is
-	// skipped entirely for this value (see init.go/eval.go).
-	Protocol string `option:"protocol" help:"which single protocol to run (solend/kamino/marginfi/native/native_lite/tx_health) -- leave unset to run the original full unscoped sequence"`
+	Protocol string `option:"protocol" help:"which single protocol to run (solend/kamino/marginfi/native/native_lite) -- leave unset to run the original full unscoped sequence"`
 }
 
 func (r *TestPerpLatencyCmd) Run(rc *RunConfig) error {
@@ -135,12 +127,11 @@ func (r *TestPerpLatencyCmd) Run(rc *RunConfig) error {
 
 	entry.Info(fmt.Sprintf("cmd - 5; doing %s", mode))
 	select {
-	// testperp's original 3-minute window was tuned for testperpv1's
-	// quick ~16-action single pass -- this mode instead runs
-	// CYCLE_TARGET (100) real deposit<->withdraw round trips for one
-	// protocol, each needing a real transaction to land and confirm, so
-	// it needs a much longer window. 60 minutes is a generous guess, not
-	// a measured number -- there's no real-run data yet on how long 100
+	// This mode runs CYCLE_TARGET (100) real deposit<->withdraw round
+	// trips for one protocol, each needing a real transaction to land
+	// and confirm, so it needs a generous window, not just enough for a
+	// quick single pass. 60 minutes is a generous guess, not a measured
+	// number -- there's no real-run data yet on how long 100
 	// cycles actually take (see this command's own doc comment on why
 	// starting with a single protocol, e.g. marginfi, keeps a first real
 	// run's cost/time bounded while that number gets established).

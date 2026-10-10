@@ -18,10 +18,8 @@ import (
 	sgo "github.com/solana-foundation/solana-go/v2"
 )
 
-// XstocksHealthCmd mirrors TestPerpCmd's allocation/prefetch/upload flow
-// exactly, except it wires up xstockshealthv1.Create instead of
-// testperpv1.Create, which uploads the WASM bot image with
-// MODE=xstockshealthv1 selected instead of MODE=testperpv1. See
+// XstocksHealthCmd wires up xstockshealthv1.Create, which uploads the
+// WASM bot image with MODE=xstockshealthv1 selected. See
 // catscope-rust-bot's src/brain/xstockshealthv1 doc comment for what that
 // mode actually does (watches Kamino xStocks obligations/reserves and
 // logs a health-factor board -- a passive watcher, not a trading
@@ -61,11 +59,11 @@ func (r *XstocksHealthCmd) Run(rc *RunConfig) error {
 	}
 	// XstocksHealthCmd only ever reads the prefetch database that
 	// DownloadArbCmd already populated at this fixed path -- it does not
-	// fetch on-chain dex state itself, regardless of r.WorkingDir. Same
-	// as TestPerpCmd; this mode's Rust side has no use for the resulting
-	// *sql.DB (no account-usage/target-allocation/LST-APY persistence),
-	// but the bot image build still needs the same static liquidity
-	// router data every other mode compiles in.
+	// fetch on-chain dex state itself, regardless of r.WorkingDir. This
+	// mode's Rust side has no use for the resulting *sql.DB (no
+	// account-usage/target-allocation/LST-APY persistence), but the bot
+	// image build still needs the same static liquidity router data
+	// every other mode compiles in.
 	prefetchDB, err := store.Open(getDBFilePath())
 	if err != nil {
 		return fmt.Errorf("failed to open prefetch db: %s", err)
@@ -98,10 +96,9 @@ func (r *XstocksHealthCmd) Run(rc *RunConfig) error {
 	}
 	mode := "xstockshealthv1"
 	entry.Info(fmt.Sprintf("cmd - 3; doing %s", mode))
-	// No startBundlerTipBroadcaster call here, unlike TestPerpCmd -- this
-	// mode's Hook has no SendBundlerTipUpdate (it sends no transactions,
-	// so it never needs a live tip), and that helper expects a real
-	// send func, not a nil one.
+	// No startBundlerTipBroadcaster call here -- this mode's Hook has no
+	// SendBundlerTipUpdate (it sends no transactions, so it never needs a
+	// live tip), and that helper expects a real send func, not a nil one.
 	ms, err := mothership.Create(ctx, dialer, b)
 	entry.Info(fmt.Sprintf("cmd - 4; doing %s", mode))
 	if err != nil {

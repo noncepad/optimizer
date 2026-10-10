@@ -64,17 +64,6 @@ func (hs *eventHook) Init(g graph.Graph, builder *txbuilder.BuildManager, addres
 	// Rust module) once that question is settled.
 	if hs.config.TargetProtocol == "native_lite" {
 		mEnv["MODE"] = "testlatencylitev1"
-	} else if hs.config.TargetProtocol == "tx_health" {
-		// "tx_health" selects a completely separate, passive listen-only
-		// Rust brain (midontxhealthv1) that measures whether the
-		// Transaction-lane event stream (Event::Transaction ->
-		// mid_on_tx) actually delivers every transaction in a block --
-		// real, live-measured evidence 2026-09-09 found some slots
-		// missing 40-67% of their real transactions with no error
-		// signal. Sends no transactions and needs no wallet -- see
-		// Evaluate's own early-return for this same sentinel, which
-		// skips the real parent->child boot transfer below entirely.
-		mEnv["MODE"] = "midontxhealthv1"
 	} else {
 		mEnv["MODE"] = "testperplatencyv1"
 	}

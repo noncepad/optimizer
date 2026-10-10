@@ -53,7 +53,7 @@ const (
 // define their own wire protocol on top of the raw catmsg.FixedPair
 // values flowing through SendC/RecvC -- this package doesn't know or
 // care what any specific bot mode's key flags mean (see message.go in
-// brain/arbv1 and siblings for that).
+// brain/testperplatencyv1 and siblings for that).
 type Bot struct {
 	mode      string
 	pipeline  sgo.PublicKey

@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+// Package ledger.v1 is the wire format wiki/plugin/ledger's PluginData
+// hook (see ../../plugindata.go) parses: an alternative to the
+// %GNUCASH_TX%/%GNUCASH_SPLIT% macro-driven path (save.go) for recording
+// a transaction's splits directly, without writing TML markup.
+//
+// Unlike the macro path, this never creates or edits a topic body -
+// topic_id and every split's account_id must already name real topics: a
+// %GNUCASH_TX% topic and %GNUCASH_ACCOUNT% topics respectively, however
+// those were created (typically via the normal macro-driven PutTopic/
+// PutTopics path, setting the transaction topic's own Date/Description -
+// this message only ever replaces its splits).
+package ledger.v1;
+
+option go_package = "git.noncepad.com/pkg/optimizer/gen/plugin/ledger/v1;ledgerv1";
+
+// Split is one leg of a Transaction.
+message Split {
+  // The account topic's topics.id - must already be a %GNUCASH_ACCOUNT% topic.
+  uint64 account_id = 1;
+  // Decimal amount, same convention as %GNUCASH_SPLIT%'s own Amount
+  // attribute (see the ledger package's doc comment): positive = Debit,
+  // negative = Credit, e.g. "45.00" or "-45.00". Always a string, never
+  // a float, for the same exact-decimal reason parseAmount/formatAmount
+  // use math/big.Rat rather than float64.
+  string amount = 2;
+}
+
+// Transaction records one balanced transaction's splits against an
+// already-existing %GNUCASH_TX% topic - splits must sum to zero, the
+// same requirement the macro-driven path enforces. Replaces that
+// topic's entire current split set (same "clean slate" behavior Save
+// itself has for a re-save).
+message Transaction {
+  // The transaction topic's topics.id - must already be a %GNUCASH_TX% topic.
+  uint64 topic_id = 1;
+  repeated Split split = 2;
+}

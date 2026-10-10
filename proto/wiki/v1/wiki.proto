@@ -1,0 +1,550 @@
+syntax = "proto3";
+
+// WikiService reads and writes wiki content: webs, topics and their
+// revision history, attachments, and Foswiki-style DataForms (see
+// db/schema.sql's forms/form_fields/topic_fields tables, and
+// README.md's "Data forms" section, for the on-disk model this mirrors).
+//
+// DataForms are not a separate write path: a topic "has" a form by
+// setting form_name and fields on a PutTopicRequest, exactly as Foswiki
+// stores %META:FORM%/%META:FIELD%. QueryFormRows is a read-only
+// convenience view over the resulting data (the same materialized view
+// migrate/formtables.go builds), so there's exactly one source of truth
+// for field values.
+package wiki.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "git.noncepad.com/pkg/optimizer/gen/wiki/v1;wikiv1";
+
+// ---- core content model ----
+
+// Web is a top-level namespace containing topics.
+message Web {
+  string name = 1;
+  int32 topic_count = 2;
+}
+
+// Topic identifies a topic independent of any specific revision. The
+// fields below topic_id/web/name/latest_rev/timestamp are populated by
+// ListTopics (see its own doc comment on why - a single indexed-ish
+// query, not a second round trip per topic); no other RPC embeds a
+// Topic today.
+message Topic {
+  uint64 topic_id = 1;
+  string web = 2;
+  string name = 3;
+  int32 latest_rev = 4;
+  int64 timestamp = 5;
+  string parent_topic = 6;  // latest revision's TOPICPARENT; "" if none
+  bool has_children = 7;    // true if some other topic's parent_topic names this one
+  int64 body_size = 8;      // latest revision's raw body length, in bytes
+}
+
+// Preference is one "Set NAME = value" preference defined on a topic
+// revision (%META:PREFERENCE%).
+message Preference {
+  string name = 1;
+  string value = 2;
+  string type = 3;
+}
+
+// Field is one DataForm field value (%META:FIELD%) attached to a topic
+// revision. Multi-valued field types (checkbox, or any type with a
+// "+multi" suffix - see FormFieldDef.multi_valued) pack their selections
+// into a single comma-separated value, same as Foswiki.
+message Field {
+  string name = 1;
+  string value = 2;
+  string title = 3;
+}
+
+// TopicMove records that a topic was renamed/moved from another location
+// (%META:TOPICMOVED%).
+message TopicMove {
+  string from = 1;
+  string to = 2;
+  string by = 3;
+  google.protobuf.Timestamp date = 4;
+}
+
+// TopicRevision is one full revision of a topic: its text plus every
+// piece of metadata parsed out of it.
+message TopicRevision {
+  string web = 1;
+  string topic = 2;
+  int32 rev = 3;
+  string author = 4;
+  google.protobuf.Timestamp date = 5;
+  string comment = 6;
+  string format = 7;
+  string parent_topic = 8;  // TOPICPARENT name; "" if none
+  // Rendered as Markdown (render.RenderMarkdown), not the topic's raw
+  // TML source - this is a read-oriented view, not what PutTopicRequest
+  // expects back (see that message's own "body" field, which is TML and
+  // unrelated to this one besides the name). %INCLUDE% is resolved
+  // fresh against target topics' *current* content every call (see
+  // wikiServer.topicBody); everything else was baked in at save time.
+  string body = 9;
+  string form_name = 10;    // the DataForm this topic uses; "" if none
+  repeated Field fields = 11;
+  repeated Preference preferences = 12;
+  optional TopicMove moved = 13;
+}
+
+// RevisionSummary is the lightweight form of a revision used in history
+// listings (no body/fields).
+message RevisionSummary {
+  int32 rev = 1;
+  string author = 2;
+  google.protobuf.Timestamp date = 3;
+  string comment = 4;
+}
+
+// AttachmentInfo describes an attachment at its latest revision.
+message AttachmentInfo {
+  string name = 1;
+  int32 latest_rev = 2;
+  int64 size = 3;
+}
+
+// AttachmentRevisionInfo describes one revision of an attachment
+// (metadata only - see GetAttachment for the bytes).
+message AttachmentRevisionInfo {
+  int32 rev = 1;
+  string author = 2;
+  google.protobuf.Timestamp date = 3;
+  string comment = 4;
+  int64 size = 5;
+  string content_hash = 6;  // hex-encoded sha256, the RocksDB blob key
+}
+
+// ---- data forms ----
+
+// FormFieldDef is one field defined by a DataForm's definition table
+// (e.g. the table in Sales/MeetingForm).
+message FormFieldDef {
+  int32 seq = 1;
+  string name = 2;           // sanitized identifier; matches Field.name
+  string title = 3;          // raw "Name" column text
+  string type = 4;           // e.g. text, date, select, select+values, checkbox+multi
+  string size = 5;
+  string values = 6;         // literal option list, or a macro expression that computes one
+  string description = 7;
+  string attributes = 8;     // e.g. "M" mandatory, "H" hidden
+  string default_value = 9;
+  bool multi_valued = 10;    // true for checkbox and any "+multi" type
+}
+
+// FormDefinition is a DataForm: the topic that defines it, plus its
+// fields in definition order.
+message FormDefinition {
+  string web = 1;
+  string topic = 2;
+  string table_name = 3;  // the generated SQL table name, for reference
+  repeated FormFieldDef fields = 4;
+}
+
+// FormRow is one topic's current field values for a form, as a
+// name->value map (see QueryFormRows).
+message FormRow {
+  string web = 1;
+  string topic = 2;
+  int32 rev = 3;
+  int64 timestamp = 4;
+  map<string, string> fields = 5;
+}
+
+// ---- change log ----
+
+// Change is one entry from a web's audit log: who did what to which
+// topic/attachment and when. Independent of revision text, and the only
+// record of pure renames/removes.
+message Change {
+  string web = 1;
+  google.protobuf.Timestamp time = 2;
+  string cuid = 3;
+  string verb = 4;
+  string topic = 5;
+  string revision = 6;
+  bool minor = 7;
+  string comment = 8;
+  string more = 9;
+  string old_path = 10;
+  string path = 11;
+  string attachment = 12;
+  string old_attachment = 13;
+}
+
+// ---- requests / responses ----
+
+message ListWebsRequest {}
+message ListWebsResponse {
+  repeated Web webs = 1;
+}
+
+// CreateWeb creates a new, empty-of-content web: the web row itself,
+// plus two seed topics every web is expected to have - WebHome (the
+// landing page PutTopic's own doc comment, and cmd/wiki-server's "/"
+// redirect, assume exists) and WebPreferences (where Set NAME = value
+// preferences like ALLOWWEBCHANGE live - see topic_preferences). Fails
+// with AlreadyExists if the web name is taken. PutTopic requires an
+// already-existing web (mirroring PutAttachment's requirement that its
+// topic already exist) - this is the only way to create one.
+message CreateWebRequest {
+  string name = 1;
+}
+message CreateWebResponse {
+  Web web = 1;
+}
+
+// ListTopicsRequest's optional filter answers two different queries
+// over a web's topics without pulling every one of them just to filter
+// client-side (the alternative: ListTopics with no filter, then
+// GetTopicSource per topic to learn TOPICPARENT, which is exactly what
+// this exists to avoid for a caller - e.g. a filesystem-style
+// LsInfo/Backend implementation - that only wants one topic or one
+// parent's direct children):
+//   - topic: an exact-name lookup (0 or 1 results).
+//   - parent: every topic whose latest revision's TOPICPARENT equals
+//     the given value - "" selects top-level topics (those with no
+//     parent), it does not mean "unset".
+// Leaving the oneof entirely unset (its Go zero value, nil) returns
+// every topic in the web, the same behavior ListTopics has always had.
+message ListTopicsRequest {
+  string web = 1;
+  oneof filter {
+    string topic = 2;
+    string parent = 3;
+  }
+}
+message ListTopicsResponse {
+  repeated Topic topics = 1;
+}
+
+message GetTopicRequest {
+  string web = 1;
+  string topic = 2;
+  int32 rev = 3;  // 0 = latest
+}
+
+message ListTopicRevisionsRequest {
+  string web = 1;
+  string topic = 2;
+}
+message ListTopicRevisionsResponse {
+  repeated RevisionSummary revisions = 1;
+}
+
+// Backlink is one other topic's current (latest-revision) link to the
+// topic named in a ListBacklinksRequest.
+message Backlink {
+  string web = 1;         // the referencing topic's web
+  string topic = 2;       // the referencing topic's name
+  string raw_target = 3;  // the link text as the referencing topic actually wrote it, e.g. "WebHome" or "Sales.MeetingForm"
+}
+
+// ListBacklinks answers "what links here": every topic whose current
+// revision contains a resolved link to the given topic. Backed by
+// topic_links (see astdb.ResolveLinks/db/schema.sql), so this reflects
+// the topic's *current* name/web even if it's been renamed since the
+// linking topics were last saved - the same rename-safety PutTopic/
+// GetTopic already give a single topic's own links.
+message ListBacklinksRequest {
+  string web = 1;
+  string topic = 2;
+}
+message ListBacklinksResponse {
+  repeated Backlink backlinks = 1;
+}
+
+// PutTopic creates a new revision of a topic, creating the topic if it
+// doesn't already exist - but the web must already exist (see CreateWeb);
+// PutTopic fails with NotFound otherwise, the same requirement
+// PutAttachment already has for its topic. The revision's author is
+// always the caller authenticated via the "USER" gRPC metadata key (see
+// FromContext in the grpcauth package) - callers cannot set it
+// themselves, so there's one trustworthy record of who actually made
+// each change.
+message PutTopicRequest {
+  reserved 3;  // formerly "author"; now derived from the authenticated caller
+  string web = 1;
+  string topic = 2;
+  string comment = 4;
+  string body = 5;  // TML source, parsed by render.Parse - not Markdown (contrast TopicRevision.body)
+  string parent_topic = 6;
+  string form_name = 7;
+  bool must_be_new = 8;
+  repeated Field fields = 9;
+  repeated Preference preferences = 10;
+}
+message PutTopicResponse {
+  TopicRevision revision = 1;
+}
+
+// PutTopics streams a batch of topic writes - optionally preceded by a
+// web creation, and optionally interleaved with attachment uploads -
+// committed as a single, all-or-nothing transaction: if any message in
+// the batch fails (including the web creation, if present), nothing in
+// the batch is saved, not even earlier topics/attachments that would
+// have individually succeeded.
+//
+// create_web, if sent at all, must be the first message. An "attachment"
+// message carries exactly what a standalone PutAttachment call would:
+// one "metadata" message begins an upload, followed by zero or more
+// "chunk" messages carrying its bytes in order; an upload ends either at
+// the next non-chunk message (another attachment's metadata, a "topic",
+// or end of stream) or, if this is the batch's very last message, at the
+// end of the stream - same as PutAttachment's own doc comment. A batch's
+// topics/attachments need not all target the same web, but any web they
+// reference must already exist by the time that message is processed -
+// either created earlier in the same batch via create_web, or already
+// present before the call started (the same requirement PutTopic itself
+// already has).
+//
+// A "plugin" message (see PluginData) dispatches to whichever plugin
+// plugin_code names in the server's active data-plugin set (see Go's
+// plugindata.Set/WikiServer.DataPlugins) - a plugin_code the server has
+// no plugin registered for fails the whole batch, same as any other
+// invalid message.
+message PutTopicsRequest {
+  oneof part {
+    CreateWebRequest create_web = 1;
+    PutTopicRequest topic = 2;
+    PutAttachmentRequest attachment = 3;
+    PluginData plugin = 4;
+  }
+}
+message PutTopicsResponse {
+  // Set only if create_web was sent.
+  Web created_web = 1;
+  // One revision per "topic" message sent, in the same order.
+  repeated TopicRevision revisions = 2;
+  // One entry per attachment uploaded via one or more "attachment"
+  // messages (a metadata message followed by zero or more chunk
+  // messages), in the same order. Each of these also appends the topic
+  // revision PutAttachment always creates alongside an attachment
+  // revision (see PutAttachmentResponse.topic_rev) to revisions above.
+  repeated AttachmentRevisionInfo attachment_revisions = 3;
+}
+
+// DeleteTopicRequest's actor is the authenticated caller, same as
+// PutTopicRequest.
+message DeleteTopicRequest {
+  reserved 3;  // formerly "author"; now derived from the authenticated caller
+  string web = 1;
+  string topic = 2;
+}
+
+message ListAttachmentsRequest {
+  string web = 1;
+  string topic = 2;
+}
+message ListAttachmentsResponse {
+  repeated AttachmentInfo attachments = 1;
+}
+
+message ListAttachmentRevisionsRequest {
+  string web = 1;
+  string topic = 2;
+  string attachment = 3;
+}
+message ListAttachmentRevisionsResponse {
+  repeated AttachmentRevisionInfo revisions = 1;
+}
+
+message GetAttachmentRequest {
+  string web = 1;
+  string topic = 2;
+  string attachment = 3;
+  int32 rev = 4;  // 0 = latest
+}
+// GetAttachment streams its response: exactly one "info" message first,
+// followed by one or more "chunk" messages carrying the attachment's
+// bytes in order.
+message GetAttachmentResponse {
+  oneof part {
+    AttachmentRevisionInfo info = 1;
+    bytes chunk = 2;
+  }
+}
+
+// PluginData is a PutTopicsRequest "plugin" message's payload: an opaque
+// envelope around a plugin's own protobuf message (compiled from
+// wiki/plugin/<name>/proto - e.g. wiki/plugin/ledger/proto/v1/plugin.proto's
+// Transaction), so a plugin can extend the batch write path without this
+// file (or gen/wiki/v1) needing to know its message shape.
+message PluginData{
+  // Selects which plugin handles data: the server sorts its active
+  // data-plugins alphabetically by name and plugin_code is the index
+  // into that sorted list (see Go's plugindata.Set.Lookup) - not a
+  // fixed/configured id, so it can shift if plugins are added or
+  // removed. The client and server must agree on the same active plugin
+  // set for a given plugin_code to mean the same plugin on both ends.
+  uint32 plugin_code = 1;
+  // data is that plugin's own serialized protobuf message - e.g.
+  // ledger.v1.Transaction for wiki/plugin/ledger.
+  bytes data = 2;
+}
+
+// PutAttachment streams its request: exactly one "metadata" message
+// first, followed by one or more "chunk" messages carrying the
+// attachment's bytes in order.
+message PutAttachmentRequest {
+  oneof part {
+    PutAttachmentMetadata metadata = 1;
+    bytes chunk = 2;
+  }
+}
+// PutAttachmentMetadata's actor is the authenticated caller, same as
+// PutTopicRequest.
+message PutAttachmentMetadata {
+  reserved 4;  // formerly "author"; now derived from the authenticated caller
+  string web = 1;
+  string topic = 2;
+  string attachment = 3;
+  string comment = 5;
+}
+message PutAttachmentResponse {
+  AttachmentRevisionInfo revision = 1;
+  // The topic revision PutAttachment created alongside the attachment
+  // revision above - an attachment upload always creates a new topic
+  // revision too (same body/fields/preferences/form as the topic's
+  // previous revision - only the attachment set actually changed), so
+  // it shows up in the topic's own history like any other edit.
+  int32 topic_rev = 2;
+}
+
+// SearchContent is a substring search over every topic's current name +
+// raw body in a web, backed by topic_search (db/schema.sql's FTS5
+// trigram index) - built to accelerate a Backend.GrepRaw-style caller
+// (see client/eino.go) so it can avoid fetching every topic's body just
+// to find which ones contain a match. query is matched as a literal,
+// case-insensitive substring (the trigram index's own semantics -
+// there's no wildcard/boolean query syntax here, unlike %SEARCH%'s
+// query language - see macros/search.go), and must be at least 3
+// characters (the trigram index's own minimum - shorter queries can't
+// be trigram-indexed and are rejected with InvalidArgument rather than
+// silently returning nothing). Each match's body is returned inline
+// (not just its topic name) so a caller doing further line-level
+// matching on the result doesn't need a second round trip per match.
+message SearchContentRequest {
+  string web = 1;
+  string query = 2;
+}
+message SearchContentMatch {
+  string topic = 1;
+  string body = 2;  // the matching topic's current raw body (topic_revisions.body_text)
+}
+message SearchContentResponse {
+  repeated SearchContentMatch matches = 1;
+}
+
+message ListFormsRequest {}
+message ListFormsResponse {
+  repeated FormDefinition forms = 1;
+}
+
+message GetFormRequest {
+  string web = 1;
+  string topic = 2;
+}
+
+// QueryFormRows returns the current (latest-revision) field values of
+// every topic using a form, optionally filtered to rows where one field
+// equals a given value.
+message QueryFormRowsRequest {
+  string web = 1;
+  string topic = 2;  // the form definition topic
+  string filter_field = 3;
+  string filter_value = 4;
+}
+message QueryFormRowsResponse {
+  repeated FormRow rows = 1;
+}
+
+message ListChangesRequest {
+  string web = 1;
+  google.protobuf.Timestamp since = 2;
+}
+message ListChangesResponse {
+  repeated Change changes = 1;
+}
+
+// GetUserID resolves each of names to a User principal's stable integer
+// id (db/schema.sql's principals table - a topic recognized as
+// representing a Foswiki User identity, e.g. Main.JoelDeJesus under the
+// site's WikiUsers topic; see principals' own doc comment) in one round
+// trip. Each entry in names is a principal's topic name (a WikiWord
+// like "JoelDeJesus"), not a users.login auth login - the two are
+// separate concepts (see wikiadmin.v1.User) and a principal need not
+// have a login at all. ids[i] is names[i]'s id - the whole call fails
+// (NotFound) if any name doesn't resolve to a User principal, rather
+// than returning a partial result.
+message GetUserIDRequest {
+  repeated string names = 1;
+}
+message GetUserIDResponse {
+  repeated int64 ids = 1;
+}
+
+// TopicSource is a topic revision's raw, editable form - the TML source
+// PutTopicRequest expects back, plus its current fields/preferences/
+// form/parent, for a client with no other way to read a topic's true
+// source (contrast TopicRevision.body, which is rendered Markdown) to
+// populate an edit form and resubmit data it isn't intentionally
+// changing. Exists specifically for DB-less HTTP-wrapper-style clients
+// (see cmd/wiki-client) that can only reach a topic's content through
+// this API, never the database directly.
+message TopicSource {
+  string web = 1;
+  string topic = 2;
+  int32 rev = 3;
+  string body = 4;  // raw TML source (topic_revisions.body_text)
+  string parent_topic = 5;
+  string form_name = 6;
+  repeated Field fields = 7;
+  repeated Preference preferences = 8;
+}
+
+message PreviewRequest{
+  string markup = 1;
+}
+message PreviewResponse{
+  string markup = 1;
+}
+
+
+service WikiService {
+  rpc Preview(stream PreviewRequest) returns (stream PreviewResponse);
+  rpc ListWebs(ListWebsRequest) returns (ListWebsResponse);
+  rpc CreateWeb(CreateWebRequest) returns (CreateWebResponse);
+  rpc ListTopics(ListTopicsRequest) returns (ListTopicsResponse);
+  rpc GetTopic(GetTopicRequest) returns (TopicRevision);
+  // GetTopicSource is GetTopic's editing-oriented counterpart: raw TML
+  // instead of rendered Markdown - see TopicSource's own doc comment.
+  rpc GetTopicSource(GetTopicRequest) returns (TopicSource);
+  rpc ListTopicRevisions(ListTopicRevisionsRequest) returns (ListTopicRevisionsResponse);
+  rpc ListBacklinks(ListBacklinksRequest) returns (ListBacklinksResponse);
+  rpc PutTopic(PutTopicRequest) returns (PutTopicResponse);
+  // PutTopics is PutTopic's batch, all-or-nothing counterpart - see
+  // PutTopicsRequest's own doc comment.
+  rpc PutTopics(stream PutTopicsRequest) returns (PutTopicsResponse);
+  rpc DeleteTopic(DeleteTopicRequest) returns (google.protobuf.Empty);
+
+  rpc ListAttachments(ListAttachmentsRequest) returns (ListAttachmentsResponse);
+  rpc ListAttachmentRevisions(ListAttachmentRevisionsRequest) returns (ListAttachmentRevisionsResponse);
+  rpc GetAttachment(GetAttachmentRequest) returns (stream GetAttachmentResponse);
+  rpc PutAttachment(stream PutAttachmentRequest) returns (PutAttachmentResponse);
+
+  rpc ListForms(ListFormsRequest) returns (ListFormsResponse);
+  rpc GetForm(GetFormRequest) returns (FormDefinition);
+  rpc QueryFormRows(QueryFormRowsRequest) returns (QueryFormRowsResponse);
+
+  rpc SearchContent(SearchContentRequest) returns (SearchContentResponse);
+
+  rpc ListChanges(ListChangesRequest) returns (ListChangesResponse);
+
+  rpc GetUserID(GetUserIDRequest) returns (GetUserIDResponse);
+}

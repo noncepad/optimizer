@@ -1,180 +1,51 @@
 # Catscope Optimizer
 
-Run a web assembly bot that will run in [the Catscope runtime](https://catscope.io) over [Solpipe](https://solpipe.io). A local Solpipe bidder daemon sets up a gRPC tunnel to a validator. The Optimizer code base talks with the local Solpipe bidder daemon to access the target Validator (Pipeline=`2Gi87bD2MNKFREReqkJgcLodkBuQEcYGKaaWz45i2Nbo`). The main event loop is in `./brain/simple/simple.go`.
+Run a web assembly bot that will run in [the Catscope runtime](https://catscope.io) over [Solpipe](https://solpipe.io). A local Solpipe bidder daemon sets up a gRPC tunnel to a validator. The Optimizer code base talks with the local Solpipe bidder daemon to access the target Validator (Pipeline=`2Gi87bD2MNKFREReqkJgcLodkBuQEcYGKaaWz45i2Nbo`). `./brain` is the generic, mode-agnostic bot-orchestration layer (see its own package doc comment); each trading/monitoring mode is one of its sibling packages -- currently `./brain/marketwatchv1`, `./brain/testperplatencyv1`, and `./brain/xstockshealthv1`.  The solpipe bidder proxy described in [the Catscope quick start tutorial](https://catscope.io/docs/tutorials/) must be running before the optimizer will work.
 
-The rest of this page describes how to run the optimizer.  This involves
-setting up Safejar and Solpipe CLI tools, creating some onchain accounts,
-and connecting to the validator.
+Build the CLI:
 
-## Download Solpipe
-
-Download a Docker image with [Safejar](https://safejar.io) and [Solpipe](https://solpipe.io) command line tools.
-
-### Linux (Debian Trixie)
-
-```bash
-sudo apt-get update \
-  && sudo apt-get install -y wget gnupg build-essential curl \
-    pkg-config \
-    libudev-dev llvm libclang-dev \
-    protobuf-compiler libssl-dev \
-  && wget -O- https://noncepad.com/keys/nightly/trixie.sources > /tmp/sources \
-  && sudo mv /tmp/sources /etc/apt/sources.list.d/noncepad.trixie.sources \
-  && sudo apt-get update \
-  && sudo apt-get install -y solpipe
+```sh
+make
 ```
 
-### Docker
+* the resuling binary will be in `./bin/optimizer`
 
-```bash
-docker build -t solpipe:nightly https://noncepad.com/keys/nightly/Dockerfile
+Every command below takes `<parent-key>`, a file path to a Solana-CLI-format keypair JSON file (the fee payer/treasury parent -- not the bidder proxy's own fee payer). They all also expect a local Solpipe bidder daemon already running at its default sockets (`~/.solpipe.bidder.manage.sock`, `~/.solpipe.bidder.proxy.sock`) -- override via the `MANAGER_SOCKET`/`PROXY_SOCKET`/`STATE_URL`/`TXPROC_URL` environment variables if yours runs elsewhere. Set `PROGRAM_SOLPIPE` to the real on-chain Solpipe program id if the compiled-in default doesn't match the deployment you're pointed at. Any of these can go in a `.env` file in the working directory instead of being exported by hand.
+
+## Populating prefetch.db
+
+Every brain mode reads its market/lending data from a local SQLite database at `~/.optimizer/prefetch.db`, not live from chain -- populate (or refresh) it first:
+
+```sh
+./bin/optimizer download-arb <parent-key>
 ```
 
-### Mac OS
+This walks every tracked DEX (Orca, Raydium AMM/CLMM/CPMM, Pumpswap, Pumpfun, Phoenix) and lending protocol (Solend, Kamino, Marginfi, Drift, Jet) via the bidder daemon's own state connection and writes the result into prefetch.db. Use `--exact=orca,raydium_amm,...` to scope it to specific sources, or `--force` to re-fetch everything even if already populated.
 
-```bash
-brew install noncepad/homebrew-tap/noncepad-solpipe
+As its last step this command also compiles a release wasm bot image from the data it just wrote, as a smoke test -- see "Reaching each brain" below for what that needs (`REPO`, a `wasm32-wasip2` Rust toolchain). If that compile fails, the command reports an error, but prefetch.db itself has already been populated by that point regardless.
+
+## Reaching each brain
+
+Each brain mode needs two things beyond a populated prefetch.db:
+
+* `REPO` (environment variable), pointing at a local checkout of `catscope-rust-bot` with a `wasm32-wasip2`-capable Rust toolchain (`rustup target add wasm32-wasip2`). Every mode compiles that repo into a release `.wasm` binary -- statically embedding the prefetch data above -- and uploads it to the validator pipeline before doing anything else.  Clone [the catscope-rust-bot repository from here](https://github.com/noncepad/catscope-rust-bot).
+* Optionally `--working-dir` (defaults to `~/.optimizer`) and `--state-url` (defaults to the bidder daemon's own state connection).
+
+```sh
+# brain/marketwatchv1 -- read-only, never trades; live terminal dashboard
+# of SOL/JUP/JTO/BONK/WIF/RAY volatility/correlation.
+REPO=/path/to/catscope-rust-bot ./optimizer market-watch <parent-key>
+
+# brain/testperplatencyv1 -- real-transaction, 100x-cycled deposit/withdraw
+# latency test. Scope to one protocol with
+# --protocol=solend|kamino|marginfi|native|native_lite, or leave unset
+# for the original full unscoped sequence.
+REPO=/path/to/catscope-rust-bot ./optimizer testperp-latency <parent-key>
+
+# brain/xstockshealthv1 -- passive watcher: logs a health-factor board for
+# Kamino xStocks obligations/reserves, sends no transactions. Serves a
+# local page at --dashboard-addr (default 127.0.0.1:8091).
+REPO=/path/to/catscope-rust-bot ./optimizer xstocks-health <parent-key>
 ```
 
-To do an upgrade:
-
-```bash
-brew upgrade noncepad-solpipe
-```
-
-## Prerequisite
-
-We must separate the main custody of funds from the bidder daemon that automatically pays USD for API access. Set up a Jar, an onchain Solana account that controls funds like a treasury.  
-The *Jar owner* controls all funds, so owner signatures need to be done on a special PC.  For starting out, we can ignore this requirement.  Once the Jar has been created, we will then delegate funds to the Bidder daemon on a market by market basis.
-
-```bash
-WALLET=usb://ledger?key=10
-JAR_OWNER=usb://ledger?key=20
-safejar --fee-payer=$WALLET jar $WALLET
-```
-
-* fund `$WALLET` with 0.05 SOL to start
-
-For small amount of funds, just use a file based private key:
-
-```bash
-solana-keygen new -o ./owner.json
-solana-keygen new -o ./wallet.json
-safejar --fee-payer=./wallet.json jar ./owner.json
-```
-
-* set the variable `JAR_ID` from the output of `safejar jar init`
-* fund the system account `./authorizer.json` with SOL for transaction fees and account rent
-
-## Run daemon
-
-The bidder daemon is a background process that handles a soft wallet, pipeline auction budgets, and proxies
-gRPC connections to pipelines.  This must be running for the commands below to work.
-
-Run the daemon:
-
-```bash
-solpipe --fee-payer=./authorizer.json bidder proxy ./proxy.json -v
-```
-
-The daemon is accessible at:
-
-* management socket: `$HOME/.solpipe.bidder.manage.sock`
-* gRPC proxy socket: `$HOME/.solpipe.bidder.proxy.sock`
-
-Interact with the daemon with the command in a separate terminal:
-
-```bash
-solpipe bidder tui
-```
-
-## Join Bot Market
-
-For each market place, the user needs to:
-
-1. create a Safejar delegation account using a rule set derived by the bidder daemon
-1. instruct the bidder daemon to join the market place
-1. set a budget cap and pipeline allocation.
-   * to connect to pipelines for free idle capacity, just set the budget cap to 0
-1. programmatically adjust the portfolio and budget
-
-### Delegate funds (ie Set Policy)
-
-Safejar has a rule sets that govern the spending of token funds from a Delegation account. The goal is to have the bidder daemon be able to participate in Validator auctions to gain access to their respective Catscope bot runtimes.
-
-```bash
-MARKET=6VQk8GA84p7zZSyL8XtX6oVd3Vp4EJ5hoUenKoC3fHSf
-solpipe bidder propose-rule-set $MARKET
-```
-
-An example output is:
-
-```
-Jar: EV4AHRFZDjVwgytVj77xEtGgTvdNfePJdwPiJSBjMiTf
-Authorizer: 8L3PJAJTZu2Gx54h7KHNGvpTwxq7TxZkZeSVxXAnCi7m
-Market: 6VQk8GA84p7zZSyL8XtX6oVd3Vp4EJ5hoUenKoC3fHSf
-PcMint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
-Decimal: 41
-Proposed Rule Set: ( RateLimiter(EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,3000,7200) && AuthorizationConstraint(5CnV9KB5qMkmXcU2hUMHshVCstrppqr7NXjRX1Wg6z7m) ) || SweepV2(EV4AHRFZDjVwgytVj77xEtGgTvdNfePJdwPiJSBjMiTf,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100)
-```
-
-* copy `( RateLimiter(EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,3000,7200) && AuthorizationConstraint(5CnV9KB5qMkmXcU2hUMHshVCstrppqr7NXjRX1Wg6z7m) ) || SweepV2(EV4AHRFZDjVwgytVj77xEtGgTvdNfePJdwPiJSBjMiTf,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100)` as the rule set
-
-```bash
-safejar --fee-payer=$WALLET delegation init $JAR_OWNER 1 --rule="( RateLimiter(EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,3000,7200) && AuthorizationConstraint(5CnV9KB5qMkmXcU2hUMHshVCstrppqr7NXjRX1Wg6z7m) ) || SweepV2(EV4AHRFZDjVwgytVj77xEtGgTvdNfePJdwPiJSBjMiTf,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100)"
-```
-
-Sample output:
-
-```
-A delegation account has been created for jar: EV4AHRFZDjVwgytVj77xEtGgTvdNfePJdwPiJSBjMiTf
-  delegation account: GwE9Yt9K5X31kTs6HXaMHwMMGBHrjoGxSAbXaFFh1ZKA
-  jar token account:  CpWtZMR5us4FFm4CFLzQDz1wMFuJzguTS9XeFWtQ4XB3
-  mint:               EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
-```
-
-### Proxy to Market
-
-```bash
-solpipe bidder listen "( RateLimiter(EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,3000,7200) && AuthorizationConstraint(5CnV9KB5qMkmXcU2hUMHshVCstrppqr7NXjRX1Wg6z7m) ) || SweepV2(EV4AHRFZDjVwgytVj77xEtGgTvdNfePJdwPiJSBjMiTf,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100)" 6VQk8GA84p7zZSyL8XtX6oVd3Vp4EJ5hoUenKoC3fHSf
-```
-
-Once the command exits, the bidder daemon will automatically connect to the pipelines service the gRPC protobuf.
-
-## TUI
-
-Interact with the daemon with:
-
-```bash
-solpipe bidder tui
-```
-
-## Run Optimizer
-
-The optimizer code actually compiles the code automatically. The code that does that is in `./prefetch/rust.go` `Build` function.  The reason the optimizer compiles the [Catscope Rust Bot](https://github.com/noncepad/catscope-rust-bot) is that the optimizer statically compiles chain state into the web assembly binary to save on validator bot runtime memory and time.
-
-The optimizer is an example of how to programmatically:
-
-1. set a budget allocation for different pipelines (in this example, no USD/hour and 1 pipeline); see `./brain/helloworldv1`
-1. connect to the single pipeline
-1. upload a bot to this pipeline (which sits in front a validator bot runtime)
-1. run the bot and see stderr output
-
-Build optimizer:
-
-```bash
-echo $BOT_IMAGE
-cd $HOME/work/optimizer
-solana-keygen new -o ./fee-payer.json
-go build -o ./optimizer ./cmd
-```
-
-* the fee payer is also the trading wallet
-
-Run the optimizer:
-
-```bash
-MODE=helloworldv1 REPO=$HOME/work/catscope-rust-bot ./optimizer run ./fee-payer.json --orca
-```
-
-* Set `BOT_IMAGE` to the file path of the compiled web assembly bot
+Run `./bin/optimizer <command> --help` for every flag a given mode accepts, and see `./brain`'s own package doc comment for how a new mode plugs into this same upload/handshake flow.
